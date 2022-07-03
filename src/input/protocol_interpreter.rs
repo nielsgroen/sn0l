@@ -35,7 +35,7 @@ pub enum Command {
     DetermineProtocol,
     Identify,
     ToggleDebug(DebugState),
-    InitFinished,  // queries whether the engine is finished initializing
+    IsReady,  // queries whether the engine is finished long task, e.g. initializing, loading opening table
     // SetOption {OptionValue},
     NewGame,
     SetPosition(Board),  // sets the board position for that game

@@ -44,7 +44,8 @@ impl UciInterpreter {
                     .parse::<u64>()
                     .expect("movetime must be a positive integer")
             ),
-            Some(_) => panic!("unsupported calculate option"),
+            Some(other) => CalculateOptions::Infinite,  // TODO
+            // Some(_) => panic!("unsupported calculate option"),
             None => CalculateOptions::Infinite,
         }
     }
@@ -68,7 +69,7 @@ impl ProtocolInterpreter for UciInterpreter {
             "uci" => Some(Command::Identify),
             // "debug" => Some(Command::ToggleDebug),
             "debug" => Some(Command::ToggleDebug(UciInterpreter::determine_debug_state(split.into_iter()))),
-            "isready" => Some(Command::InitFinished),
+            "isready" => Some(Command::IsReady),
             // "setoption" => ,
             "ucinewgame" => Some(Command::NewGame),
             "position" => Some(Command::SetPosition(UciInterpreter::determine_board(split.into_iter()))),
