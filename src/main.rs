@@ -23,9 +23,6 @@ mod input;
 
 fn main() -> anyhow::Result<()> {
 
-    let eval = core::evaluation::eval_depth(Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap(), 3);
-    println!("Result {:?}", eval);
-
     // Make sure host (GUI) uses UCI protocol
     loop {
         let mut buffer = String::new();
