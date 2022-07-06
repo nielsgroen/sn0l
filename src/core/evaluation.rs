@@ -6,7 +6,7 @@ use chess::{Board, BoardStatus, ChessMove, Color, MoveGen, NUM_PIECES, Piece};
 use super::score;
 use super::score::Centipawns;
 
-pub fn best_move_depth(board: Board, depth: u64) -> Option<ChessMove> {
+pub fn best_move_depth(board: &Board, depth: u64) -> Option<ChessMove> {
     match board.status() {
         BoardStatus::Ongoing => {
             let mut legal_moves = MoveGen::new_legal(&board);
@@ -18,8 +18,8 @@ pub fn best_move_depth(board: Board, depth: u64) -> Option<ChessMove> {
                 // the minus is because, position is evaluated for other player
                 let score = -eval_depth(board.make_move_new(legal_move), depth - 1);
 
-                println!("{}", legal_move);
-                println!("{}", score);
+                // println!("{}", legal_move);
+                // println!("{}", score);
 
                 if score > best_score {
                     best_move = Some(legal_move);
@@ -280,5 +280,5 @@ fn check_best_move_missing_rook() {
     // only king and rooks, white misses a1 rook.
     let board = Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap();
 
-    assert_eq!(best_move_depth(board, 4), Some(ChessMove::from_str("h1h8").unwrap()));
+    assert_eq!(best_move_depth(&board, 4), Some(ChessMove::from_str("h1h8").unwrap()));
 }

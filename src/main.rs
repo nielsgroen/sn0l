@@ -43,7 +43,6 @@ fn main() -> anyhow::Result<()> {
     let mut current_board = Board::default();  // TODO move this to the core engine
     println!("uciok"); // confirm pre-init
 
-
     loop {
         let command = input_rx.recv().unwrap();
 
@@ -52,8 +51,9 @@ fn main() -> anyhow::Result<()> {
             Command::Quit => break,
             Command::SetPosition(board) => current_board = board,
             Command::Calculate(_) => {
-                let mut candidate_moves = MoveGen::new_legal(&current_board);
-                let chosen_move = candidate_moves.next().unwrap();
+                // let mut candidate_moves = MoveGen::new_legal(&current_board);
+                // let chosen_move = candidate_moves.next().unwrap();
+                let chosen_move = core::evaluation::best_move_depth(&current_board, 3).unwrap();
                 println!("bestmove {}", chosen_move)
             }
             _ => (),  // TODO
