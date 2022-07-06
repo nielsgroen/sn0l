@@ -1,5 +1,6 @@
 use std::io;
 use std::io::{BufRead, stdout};
+use std::str::FromStr;
 use std::thread;
 use std::sync::mpsc::{channel, Sender};
 use anyhow;
@@ -11,7 +12,7 @@ use input::stdin::listen_to_stdin;
 use crate::input::protocol_interpreter::Command;
 use crate::input::ProtocolSupportError;
 
-
+mod core;
 mod input;
 
 // maybe this needs to be split up, because rust requires a lock around the whole thing?
@@ -21,6 +22,9 @@ mod input;
 // }
 
 fn main() -> anyhow::Result<()> {
+
+    let eval = core::evaluation::eval_depth(Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap(), 3);
+    println!("Result {:?}", eval);
 
     // Make sure host (GUI) uses UCI protocol
     loop {
