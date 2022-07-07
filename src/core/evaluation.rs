@@ -74,7 +74,7 @@ pub fn eval_single(board: Board) -> Centipawns {
 
 /// Will evaluate the board by 'minimaxing' over single board evaluations at a given depth
 pub fn eval_depth(board: Board, max_depth: u64) -> Centipawns {
-    return max_eval(board, max_depth, 0);
+    return max_eval_pruned(board, max_depth, 0, Centipawns::new(i64::MAX));
 }
 
 pub fn max_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns {
@@ -107,33 +107,66 @@ pub fn max_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns 
     best_val
 }
 
-pub fn min_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns {
+pub fn max_eval_pruned(board: Board, max_depth: u64, current_depth: u64, prune_cutoff: Centipawns) -> Centipawns {
     if max_depth == current_depth
         || board.status() == BoardStatus::Checkmate
         || board.status() == BoardStatus::Stalemate
     {
-        let ev = eval_single(board);
-        if current_depth % 2 == 0 {
-            return ev;
-        } else {
-            return -ev;
-        }
+        return eval_single(board);
+        // let ev = eval_single(board);
+        // if current_depth % 2 == 0 {
+        //     return ev;
+        // } else {
+        //     return -ev;
+        // }
     }
 
     let mut legal_moves = MoveGen::new_legal(&board);
     let mut best_move = ChessMove::from_str("a1a2").unwrap();
-    let mut best_val = Centipawns::new(i64::MAX);
+    let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(1);  // avoids overflow for -best_val
     for legal_move in legal_moves {
-        let val = min_eval(board.make_move_new(legal_move), max_depth, current_depth + 1);
-        if val < best_val {
+        let val = -max_eval_pruned(board.make_move_new(legal_move), max_depth, current_depth + 1, -best_val);
+        if val > best_val {
             best_val = val;
+            best_move = legal_move;
+        }
+        if best_val > prune_cutoff {
+            break;
         }
     }
+
     // println!("{:?}", best_move);
     // println!("{:?}", best_val);
-
     best_val
 }
+
+// pub fn min_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns {
+//     if max_depth == current_depth
+//         || board.status() == BoardStatus::Checkmate
+//         || board.status() == BoardStatus::Stalemate
+//     {
+//         let ev = eval_single(board);
+//         if current_depth % 2 == 0 {
+//             return ev;
+//         } else {
+//             return -ev;
+//         }
+//     }
+//
+//     let mut legal_moves = MoveGen::new_legal(&board);
+//     let mut best_move = ChessMove::from_str("a1a2").unwrap();
+//     let mut best_val = Centipawns::new(i64::MAX);
+//     for legal_move in legal_moves {
+//         let val = min_eval(board.make_move_new(legal_move), max_depth, current_depth + 1);
+//         if val < best_val {
+//             best_val = val;
+//         }
+//     }
+//     // println!("{:?}", best_move);
+//     // println!("{:?}", best_val);
+//
+//     best_val
+// }
 
 // pub fn eval_depth(board: Board, max_depth: u64) -> Centipawns {
 //     // DFS over board states
@@ -281,4 +314,20 @@ fn check_best_move_missing_rook() {
     let board = Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap();
 
     assert_eq!(best_move_depth(&board, 4), Some(ChessMove::from_str("h1h8").unwrap()));
+}
+
+#[test]
+fn check_pruning_correctness() {
+    let boards = [
+        Board::from_str("r1b1k3/1p3p1B/p3p3/2bpP2p/7q/2N2K2/PPP4P/RNB4n b q - 1 20").unwrap(),
+        Board::from_str("r1bqk3/1p3p1p/p3p2Q/2bpP3/6n1/2NB1n2/PPP2PrP/RNBK3R w q - 3 14").unwrap(),
+        Board::from_str("2kr1b1r/B1pqp2p/1p2p3/5np1/4NP2/Q2P1P2/PPP4P/2KR3R b - - 1 16").unwrap(),
+        Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap(),
+        Board::from_str("r3k1r1/8/8/8/8/8/8/4K2R b Kq - 0 1").unwrap(),
+        Board::from_str("r3k1r1/8/8/8/8/8/8/4K2R w Kq - 0 1").unwrap(),
+    ];
+
+    for board in boards {
+        assert_eq!(max_eval(board, 3, 0), max_eval_pruned(board, 3, 0, Centipawns::new(i64::MAX)))
+    }
 }
