@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::ops::BitAnd;
 use std::str::FromStr;
 use std::iter::ExactSizeIterator;
-use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, MoveGen, NUM_PIECES, Piece};
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, EMPTY, MoveGen, NUM_PIECES, Piece};
 
 use super::score;
 use super::score::Centipawns;
@@ -144,7 +144,7 @@ pub fn max_eval_pruned(board: Board, max_depth: u64, current_depth: u64, prune_c
         // }
     }
 
-    if max_depth == current_depth {
+    if max_depth <= current_depth {
         return quiescence_search(board, prune_cutoff);
     }
 
@@ -179,16 +179,19 @@ pub fn quiescence_search(board: Board, prune_cutoff: Centipawns) -> Centipawns {
         Color::Black => Color::White,
     };
 
+    // println!("Hello");
     let capture_mask = *board.color_combined(their_color);
     let mut legal_captures = MoveGen::new_legal(&board);
     legal_captures.set_iterator_mask(capture_mask);
-    let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(0);
+    let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(1);
 
-    if legal_captures.len() == 0 {
-        return eval_single(&board);
-    }
+    let mut checked_one = false;
 
     for capture_move in &mut legal_captures {
+        // a bit dirty, but the most reliable way to check if we checked 'at least one move' is by setting a var in this loop
+        // MoveGen.len() is for all moves w/ all masks
+        checked_one = true;
+
         let val = -quiescence_search(board.make_move_new(capture_move), -best_val);
         if val > best_val {
             best_val = val;
@@ -196,6 +199,10 @@ pub fn quiescence_search(board: Board, prune_cutoff: Centipawns) -> Centipawns {
         if best_val > prune_cutoff {
             return best_val;
         }
+    }
+
+    if !checked_one {
+        return eval_single(&board);
     }
 
     best_val

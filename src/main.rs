@@ -54,7 +54,7 @@ fn main() -> anyhow::Result<()> {
             Command::Calculate(_) => {
                 // let mut candidate_moves = MoveGen::new_legal(&current_board);
                 // let chosen_move = candidate_moves.next().unwrap();
-                let chosen_move = core::evaluation::best_move_depth(&current_board, 5).unwrap();
+                let chosen_move = core::evaluation::best_move_depth(&current_board, 3).unwrap();
                 println!("bestmove {}", chosen_move)
             }
             _ => (),  // TODO
