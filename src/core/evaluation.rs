@@ -1,7 +1,9 @@
 use std::cmp::{max, min};
 use std::hash::Hash;
+use std::ops::BitAnd;
 use std::str::FromStr;
-use chess::{Board, BoardStatus, ChessMove, Color, MoveGen, NUM_PIECES, Piece};
+use std::iter::ExactSizeIterator;
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, MoveGen, NUM_PIECES, Piece};
 
 use super::score;
 use super::score::Centipawns;
@@ -9,21 +11,27 @@ use super::score::Centipawns;
 pub fn best_move_depth(board: &Board, depth: u64) -> Option<ChessMove> {
     match board.status() {
         BoardStatus::Ongoing => {
+            let masks = determine_masks(&board);
+
             let mut legal_moves = MoveGen::new_legal(&board);
 
             let mut best_move: Option<ChessMove> = None;
-            let mut best_score: Centipawns = Centipawns::new(i64::MIN);
+            let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(1);  // avoids overflow for -best_val
 
-            for legal_move in legal_moves {
-                // the minus is because, position is evaluated for other player
-                let score = -eval_depth(board.make_move_new(legal_move), depth - 1);
+            for mask in masks {
+                legal_moves.set_iterator_mask(mask);
+                for legal_move in &mut legal_moves {
+                    // the minus is because, position is evaluated for other player
+                    // let score = -eval_depth(board.make_move_new(legal_move), depth - 1);
+                    let score = -max_eval_pruned(board.make_move_new(legal_move), depth - 1, 0, -best_val);
 
-                // println!("{}", legal_move);
-                // println!("{}", score);
+                    // println!("{}", legal_move);
+                    // println!("{}", score);
 
-                if score > best_score {
-                    best_move = Some(legal_move);
-                    best_score = score;
+                    if score > best_val {
+                        best_move = Some(legal_move);
+                        best_val = score;
+                    }
                 }
             }
 
@@ -37,7 +45,7 @@ pub fn best_move_depth(board: &Board, depth: u64) -> Option<ChessMove> {
 
 /// Determines the score of a `Board` without looking at deeper board states
 /// following from possible moves
-pub fn eval_single(board: Board) -> Centipawns {
+pub fn eval_single(board: &Board) -> Centipawns {
     if board.status() == BoardStatus::Checkmate {
         return Centipawns::new(-2 * score::KING_COST.0);
     } else if board.status() == BoardStatus::Stalemate {
@@ -48,11 +56,19 @@ pub fn eval_single(board: Board) -> Centipawns {
     let our_color: Color = board.side_to_move();
 
     // add up the scores of all our rooks, pawns etc.
-    for index in 0..NUM_PIECES {
-        score.0 += &score::PIECE_EVALUATIONS[index].0 * (
-                board.pieces(chess::ALL_PIECES[index])
-                    & board.color_combined(our_color))
-                    .popcnt() as i64;
+
+    // Determine piece scores
+    // Iterate over all bits in bitboard
+    for piece in chess::ALL_PIECES {
+        let BitBoard(mut piece_positions) = board.pieces(piece).bitand(board.color_combined(our_color));
+        'inner: for index in 0..64 {
+            score += Centipawns::new(score::score_tables::piece_table(our_color, piece)[index] as i64 * (piece_positions & 1) as i64);
+            piece_positions >>= 1;  // Iterate over all set bits on bitboard
+
+            if piece_positions == 0 {
+                break 'inner;
+            }
+        }
     }
 
     let mut their_score = Centipawns::new(0);
@@ -61,12 +77,18 @@ pub fn eval_single(board: Board) -> Centipawns {
         Color::Black => Color::White,
     };
 
-    // add up the scores of all their rooks, pawns etc.
-    for index in 0..NUM_PIECES {
-        their_score.0 += &score::PIECE_EVALUATIONS[index].0 * (
-                board.pieces(chess::ALL_PIECES[index])
-                    & board.color_combined(their_color))
-                    .popcnt() as i64;
+    // Determine piece scores
+    // Iterate over all bits in bitboard
+    for piece in chess::ALL_PIECES {
+        let BitBoard(mut piece_positions) = board.pieces(piece).bitand(board.color_combined(their_color));
+        'inner: for index in 0..64 {
+            their_score += Centipawns::new(score::score_tables::piece_table(their_color, piece)[index] as i64 * (piece_positions & 1) as i64);
+            piece_positions >>= 1;
+
+            if piece_positions == 0 {
+                break 'inner;
+            }
+        }
     }
 
     score - their_score
@@ -77,12 +99,13 @@ pub fn eval_depth(board: Board, max_depth: u64) -> Centipawns {
     return max_eval_pruned(board, max_depth, 0, Centipawns::new(i64::MAX));
 }
 
+#[deprecated]
 pub fn max_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns {
     if max_depth == current_depth
         || board.status() == BoardStatus::Checkmate
         || board.status() == BoardStatus::Stalemate
     {
-        return eval_single(board);
+        return eval_single(&board);
         // let ev = eval_single(board);
         // if current_depth % 2 == 0 {
         //     return ev;
@@ -94,6 +117,7 @@ pub fn max_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns 
     let mut legal_moves = MoveGen::new_legal(&board);
     let mut best_move = ChessMove::from_str("a1a2").unwrap();
     let mut best_val = Centipawns::new(i64::MIN);
+
     for legal_move in legal_moves {
         let val = -max_eval(board.make_move_new(legal_move), max_depth, current_depth + 1);
         if val > best_val {
@@ -108,11 +132,10 @@ pub fn max_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns 
 }
 
 pub fn max_eval_pruned(board: Board, max_depth: u64, current_depth: u64, prune_cutoff: Centipawns) -> Centipawns {
-    if max_depth == current_depth
-        || board.status() == BoardStatus::Checkmate
+    if board.status() == BoardStatus::Checkmate
         || board.status() == BoardStatus::Stalemate
     {
-        return eval_single(board);
+        return eval_single(&board);
         // let ev = eval_single(board);
         // if current_depth % 2 == 0 {
         //     return ev;
@@ -121,17 +144,27 @@ pub fn max_eval_pruned(board: Board, max_depth: u64, current_depth: u64, prune_c
         // }
     }
 
+    if max_depth == current_depth {
+        return quiescence_search(board, prune_cutoff);
+    }
+
+    let masks = determine_masks(&board);
+
     let mut legal_moves = MoveGen::new_legal(&board);
-    let mut best_move = ChessMove::from_str("a1a2").unwrap();
+    // let mut best_move = ChessMove::from_str("a1a2").unwrap();
     let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(1);  // avoids overflow for -best_val
-    for legal_move in legal_moves {
-        let val = -max_eval_pruned(board.make_move_new(legal_move), max_depth, current_depth + 1, -best_val);
-        if val > best_val {
-            best_val = val;
-            best_move = legal_move;
-        }
-        if best_val > prune_cutoff {
-            break;
+
+    for mask in masks {
+        legal_moves.set_iterator_mask(mask);
+        for legal_move in &mut legal_moves {
+            let val = -max_eval_pruned(board.make_move_new(legal_move), max_depth, current_depth + 1, -best_val);
+            if val > best_val {
+                best_val = val;
+                // best_move = legal_move;
+            }
+            if best_val > prune_cutoff {
+                return best_val;
+            }
         }
     }
 
@@ -140,6 +173,46 @@ pub fn max_eval_pruned(board: Board, max_depth: u64, current_depth: u64, prune_c
     best_val
 }
 
+pub fn quiescence_search(board: Board, prune_cutoff: Centipawns) -> Centipawns {
+    let their_color = match board.side_to_move() {
+        Color::White => Color::Black,
+        Color::Black => Color::White,
+    };
+
+    let capture_mask = *board.color_combined(their_color);
+    let mut legal_captures = MoveGen::new_legal(&board);
+    legal_captures.set_iterator_mask(capture_mask);
+    let mut best_val = Centipawns::new(i64::MIN) + Centipawns::new(0);
+
+    if legal_captures.len() == 0 {
+        return eval_single(&board);
+    }
+
+    for capture_move in &mut legal_captures {
+        let val = -quiescence_search(board.make_move_new(capture_move), -best_val);
+        if val > best_val {
+            best_val = val;
+        }
+        if best_val > prune_cutoff {
+            return best_val;
+        }
+    }
+
+    best_val
+}
+
+fn determine_masks(board: &Board) -> [BitBoard; 6] {
+    let opponent_piece_locations = board.color_combined(!(&board).side_to_move());
+
+    [
+        score::VERY_CENTER.bitand(opponent_piece_locations),
+        score::CENTER.bitand(opponent_piece_locations),
+        *opponent_piece_locations,
+        score::VERY_CENTER,
+        score::CENTER,
+        !chess::EMPTY,
+    ]
+}
 // pub fn min_eval(board: Board, max_depth: u64, current_depth: u64) -> Centipawns {
 //     if max_depth == current_depth
 //         || board.status() == BoardStatus::Checkmate
@@ -288,7 +361,7 @@ fn bubble_up_parent_evals(current_eval: Centipawns, parent_evals: &mut Vec<Optio
 fn check_single_eval_startpos() {
     let board = Board::default();
 
-    assert_eq!(eval_single(board), Centipawns::new(0));
+    assert_eq!(eval_single(&board), Centipawns::new(0));
 }
 
 #[test]
@@ -296,7 +369,7 @@ fn check_single_eval_missing_rook() {
     // only king and rooks, white misses a1 rook.
     let board = Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap();
 
-    assert_eq!(eval_single(board), Centipawns::new(-500));
+    assert_eq!(eval_single(&board), Centipawns::new(-500));
 }
 
 #[test]

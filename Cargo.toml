@@ -9,3 +9,4 @@ edition = "2021"
 chess = "3.2.0"  # The (temporary?) legal move generator
 itertools = "0.10.3"
 anyhow = "1.0.58"
+rust-dense-bitset = "0.1.1"

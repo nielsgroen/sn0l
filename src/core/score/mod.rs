@@ -1,7 +1,9 @@
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use chess::NUM_PIECES;
+use chess::BitBoard;
 
+pub mod score_tables;
 
 pub const PAWN_COST: Centipawns = Centipawns(100);
 pub const KNIGHT_COST: Centipawns = Centipawns(300);
@@ -9,6 +11,10 @@ pub const BISHOP_COST: Centipawns = Centipawns(300);
 pub const ROOK_COST: Centipawns = Centipawns(500);
 pub const QUEEN_COST: Centipawns = Centipawns(900);
 pub const KING_COST: Centipawns = Centipawns(1_000_000);
+
+
+pub const CENTER: BitBoard = BitBoard(0x00_00_3C_3C_3C_3C_00_00);
+pub const VERY_CENTER: BitBoard = BitBoard(0x00_00_00_18_18_00_00_00);
 
 // Corresponds to Chess::ALL_PIECES
 pub const PIECE_EVALUATIONS: [Centipawns; NUM_PIECES] = [

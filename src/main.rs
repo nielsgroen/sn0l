@@ -14,6 +14,7 @@ use crate::input::ProtocolSupportError;
 
 mod core;
 mod input;
+mod util;
 
 // maybe this needs to be split up, because rust requires a lock around the whole thing?
 // struct GlobalState {
