@@ -1,3 +1,4 @@
+use std::num::NonZeroU32;
 use chess::Board;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -9,13 +10,14 @@ pub enum SupportedProtocols {
 pub enum CalculateOptions {
     Infinite,  // Keep on calculating in perpetuity
     MoveTime(u64),  // Time to calculate, in ms
-    // Game {
-    //     white_time: u64,
-    //     black_time: u64,
-    //     white_increment: u64,
-    //     black_increment: u64,
-    //     // moves_to_go: u64  // moves to next time control
-    // }
+    Game {
+        white_time: u64,
+        black_time: u64,
+        white_increment: u64,
+        black_increment: u64,
+        // moves_to_go: u64  // moves to next time control
+    },
+    Depth(u32),
 }
 
 impl Default for CalculateOptions {

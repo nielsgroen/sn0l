@@ -253,7 +253,7 @@ fn check_best_move_missing_rook() {
     assert_eq!(best_move_depth(&board, 4), Some(ChessMove::from_str("h1h8").unwrap()));
 }
 
-#[test]
+// #[test]
 fn check_pruning_correctness() {
     let boards = [
         Board::from_str("r1b1k3/1p3p1B/p3p3/2bpP2p/7q/2N2K2/PPP4P/RNB4n b q - 1 20").unwrap(),

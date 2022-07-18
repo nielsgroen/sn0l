@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::num::NonZeroU32;
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use chess::NUM_PIECES;
 use chess::BitBoard;
@@ -27,7 +28,7 @@ pub const PIECE_EVALUATIONS: [Centipawns; NUM_PIECES] = [
 ];
 
 // Used for board evaluation, scored in 100ths of a pawn
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub struct Centipawns(pub i64);
 
 impl Centipawns {
@@ -77,3 +78,33 @@ impl Display for Centipawns {
         write!(f, "{}", self.0)
     }
 }
+
+/// Represents the evaluation of a position: (instead of deprecated current player score)
+/// Positive evaluations mean, white is estimated to be ahead. Black vice versa.
+///
+/// For Mate, a sooner checkmate is better than a later one
+///
+/// Example of order of most positive to least positive:
+/// WhiteMate(1) > WhiteMate(+inf) > Centipawn(+inf) > Centipawn(0) > Centipawn(-inf) > BlackMate(+inf) > BlackMate(1)
+///
+/// `WhiteMate(0)` => White has checkmated Black.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+pub enum BoardEvaluation {
+    // Make sure to keep this order, so #derive(Ord) works correctly
+    BlackMate(u32),
+    PieceScore(Centipawns),
+    WhiteMate(u32),
+}
+
+impl Display for BoardEvaluation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            Self::BlackMate(x) => write!(f, "-M{}", x),
+            Self::PieceScore(x) if *x > Centipawns::new(0) => write!(f, "+{}", x),
+            Self::PieceScore(x) => write!(f, "{}", x),
+            Self::WhiteMate(x) => write!(f, "+M{}", x),
+        }
+    }
+}
+
+
