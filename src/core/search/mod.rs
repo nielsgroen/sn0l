@@ -6,15 +6,18 @@ use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 use transposition::TranspositionTable;
+use crate::core::score::BoardEvaluation;
 
 pub mod transposition;
 mod iterative_deepening;
 mod move_ordering;
+mod alpha_beta;
 
 
 /// The information about what search has been done on a particular node.
 pub struct SearchInfo {
     depth_searched: SearchDepth,
+    evaluation: BoardEvaluation,
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -22,7 +25,7 @@ pub enum SearchDepth {
     // Ordering matters for derive Ord
     Single, // Did a simple single board eval
     Quiescent, // Performed Quiescence Search from this node
-    Depth(NonZeroU32), // Depth still left to go
+    Depth(u32), // Depth still left to go
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -74,7 +77,7 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
             SearchCommand::SetPosition(board) => main_board = board,
             SearchCommand::NewGame => transposition_table = TranspositionTable::default(),
             SearchCommand::Calculate(options) => {
-
+                todo!()
             },
             SearchCommand::Stop => (),
         }

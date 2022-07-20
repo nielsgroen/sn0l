@@ -1,7 +1,8 @@
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
-use chess::NUM_PIECES;
+use chess::{NUM_PIECES, Piece};
 use chess::BitBoard;
 
 pub mod score_tables;
@@ -26,6 +27,17 @@ pub const PIECE_EVALUATIONS: [Centipawns; NUM_PIECES] = [
     Centipawns(900),
     Centipawns(1_000_000),
 ];
+
+pub fn piece_value(piece: Piece) -> Centipawns {
+    match piece {
+        Piece::Pawn => PAWN_COST,
+        Piece::Knight => KNIGHT_COST,
+        Piece::Bishop => BISHOP_COST,
+        Piece::Rook => ROOK_COST,
+        Piece::Queen => QUEEN_COST,
+        Piece::King => KING_COST,
+    }
+}
 
 // Used for board evaluation, scored in 100ths of a pawn
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -88,7 +100,7 @@ impl Display for Centipawns {
 /// WhiteMate(1) > WhiteMate(+inf) > Centipawn(+inf) > Centipawn(0) > Centipawn(-inf) > BlackMate(+inf) > BlackMate(1)
 ///
 /// `WhiteMate(0)` => White has checkmated Black.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum BoardEvaluation {
     // Make sure to keep this order, so #derive(Ord) works correctly
     BlackMate(u32),
@@ -107,4 +119,30 @@ impl Display for BoardEvaluation {
     }
 }
 
+impl PartialOrd<Self> for BoardEvaluation {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for BoardEvaluation {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (BoardEvaluation::WhiteMate(x), BoardEvaluation::WhiteMate(y)) => {
+                match x.cmp(y) {
+                    Ordering::Less => Ordering::Greater,
+                    Ordering::Equal => Ordering::Equal,
+                    Ordering::Greater => Ordering::Less,
+                }
+            },
+            (BoardEvaluation::WhiteMate(_), _) => Ordering::Greater,
+            (BoardEvaluation::PieceScore(_), BoardEvaluation::WhiteMate(_)) => Ordering::Less,
+            (BoardEvaluation::PieceScore(x), BoardEvaluation::PieceScore(y)) => x.cmp(y),
+            (BoardEvaluation::PieceScore(_), BoardEvaluation::BlackMate(_)) => Ordering::Greater,
+            (BoardEvaluation::BlackMate(_), BoardEvaluation::WhiteMate(_)) => Ordering::Less,
+            (BoardEvaluation::BlackMate(_), BoardEvaluation::PieceScore(_)) => Ordering::Less,
+            (BoardEvaluation::BlackMate(x), BoardEvaluation::BlackMate(y)) => x.cmp(y),
+        }
+    }
+}
 

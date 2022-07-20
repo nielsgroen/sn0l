@@ -41,9 +41,17 @@ pub fn single_evaluation(board: &Board) -> BoardEvaluation {
 }
 
 
-#[test]
-fn check_equal_startpos() {
-    let board = Board::default();
+#[cfg(test)]
+mod tests {
+    use chess::Board;
 
-    assert_eq!(single_evaluation(&board), BoardEvaluation::PieceScore(Centipawns::new(0)));
+    use crate::core::score::{BoardEvaluation, Centipawns};
+    use super::single_evaluation;
+
+    #[test]
+    fn check_equal_startpos() {
+        let board = Board::default();
+
+        assert_eq!(single_evaluation(&board), BoardEvaluation::PieceScore(Centipawns::new(0)));
+    }
 }
