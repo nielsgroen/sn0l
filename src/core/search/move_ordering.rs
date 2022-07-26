@@ -8,7 +8,7 @@ pub fn order_captures(
     current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
-) -> Vec<ChessMove> {
+) -> Vec<(ChessMove, BoardEvaluation)> {
     // Order by `val captee` - `val capturer` (+ `val promotion`)
 
     // Make extra sure we're only looking at the capture moves
@@ -52,8 +52,8 @@ pub fn order_captures(
     moves.sort_by_key(|(_, a)| a);
 
     match our_color { // Make sure to reverse order if black is making the move
-        Color::White => moves.iter().map(|(x, _)| x).collect(),
-        Color::Black => moves.iter().map(|(x, _)| x).rev().collect(),
+        Color::White => moves,
+        Color::Black => moves.iter().rev().collect(),
     }
 }
 
@@ -61,15 +61,16 @@ pub fn order_captures(
 /// Assumes captures have already been run exhausted from the MoveGen
 pub fn order_non_captures(
     board: &Board,
+    current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
-) -> Vec<ChessMove> {
+) -> Vec<(ChessMove, BoardEvaluation)> {
     let our_color = board.side_to_move();
 
     // Make extra sure we're looking at all left over moves
     move_generator.set_iterator_mask(!EMPTY);
 
-    let mut moves: Vec<(ChessMove, BoardEvaluation)>;
+    let mut moves: Vec<(ChessMove, BoardEvaluation)> = Vec::new();
 
     let mut board_new = board.clone();
 
@@ -109,7 +110,7 @@ pub fn order_non_captures(
     moves.sort_by_key(|_, a| a);
 
     match our_color { // Make sure to reverse order if black is making the move
-        Color::White => moves.iter().map(|(x, _)| x).collect(),
-        Color::Black => moves.iter().map(|(x, _)| x).rev().collect(),
+        Color::White => moves,
+        Color::Black => moves.iter().rev().collect(),
     }
 }
