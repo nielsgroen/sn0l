@@ -5,6 +5,7 @@ use crate::core::search::transposition::TranspositionTable;
 
 pub fn order_captures(
     board: &Board,
+    current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<ChessMove> {
@@ -27,10 +28,22 @@ pub fn order_captures(
             let target_piece = board.piece_on(chess_move.get_dest()).expect("capture move has no captured piece");
             let promotion = chess_move.get_promotion();
 
-            let chess_move_score = match promotion {
+            let mut chess_move_score = match promotion {
                 Some(promo) => piece_value(target_piece) - piece_value(source_piece) + piece_value(promo),
                 _ => piece_value(target_piece) - piece_value(source_piece),
             };
+
+            // Need to know the running score to properly compare with the positions that
+            // are already in the transposition table
+            let grounded_piece_score = match current_evaluation {
+                BoardEvaluation::WhiteMate(_) => None,
+                BoardEvaluation::PieceScore(x) => Some(x),
+                BoardEvaluation::BlackMate(_) => None,
+            };
+
+            if let Some(score) = grounded_piece_score {
+                chess_move_score += score;
+            }
 
             moves.push((chess_move, BoardEvaluation::PieceScore(chess_move_score)));
         }
@@ -77,7 +90,19 @@ pub fn order_non_captures(
             };
             let target_score = piece_table(our_color, target_piece)[target_square.to_index()];
 
-            moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(target_score as i64 - source_score))));
+            // Need to know the running score to properly compare with the positions that
+            // are already in the transposition table
+            let grounded_piece_score = match current_evaluation {
+                BoardEvaluation::WhiteMate(_) => None,
+                BoardEvaluation::PieceScore(x) => Some(x),
+                BoardEvaluation::BlackMate(_) => None,
+            };
+
+            if let Some(grouned_score) = grounded_piece_score {
+                moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(grouned_score as i64 + target_score as i64 - source_score))));
+            } else {
+                moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(target_score as i64 - source_score))));
+            }
         }
     }
 
