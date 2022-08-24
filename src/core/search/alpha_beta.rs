@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
-use chess::{Board, ChessMove, Color, MoveGen};
+use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
 use crate::core::evaluation::single_evaluation;
-use crate::core::score::BoardEvaluation;
+use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::move_ordering::{order_captures, order_non_captures};
 use crate::core::search::transposition::TranspositionTable;
 
@@ -16,7 +16,7 @@ pub fn search_depth_pruned(
     // The base evaluation used for move ordering, and static board scoring
     let base_evaluation = single_evaluation(&board);
 
-    let (chess_move, white_score, black_score) = search_alpha_beta(
+    let (chess_move, score) = search_alpha_beta(
         board,
         transposition_table,
         base_evaluation,
@@ -26,10 +26,7 @@ pub fn search_depth_pruned(
         depth,
     );
 
-    match board.side_to_move() {
-        Color::White => (chess_move, white_score),
-        Color::Black => (chess_move, black_score),
-    }
+    (chess_move, score)
 }
 
 pub fn search_alpha_beta(
@@ -41,6 +38,21 @@ pub fn search_alpha_beta(
     current_depth: u32,
     max_depth: u32,
 ) -> (ChessMove, BoardEvaluation) { // (_, eval)
+    // dummy move, should always be overridden
+    // unless the game is over
+    let mut best_move = ChessMove::default();
+
+    if board.status() == BoardStatus::Checkmate {
+        return match board.side_to_move() {
+            Color::White => (best_move, BoardEvaluation::BlackMate(0)), // black has checkmated white
+            Color::Black => (best_move, BoardEvaluation::WhiteMate(0)),
+        }
+    }
+
+    if board.status() == BoardStatus::Stalemate {
+        return (best_move, BoardEvaluation::PieceScore(Centipawns::new(0)));
+    }
+
     if current_depth >= max_depth {
         return quiescence_alpha_beta(
             board,
@@ -51,7 +63,6 @@ pub fn search_alpha_beta(
         );
     }
 
-    let mut best_move = ChessMove::default(); // dummy move, should always be overridden
     let mut move_gen = MoveGen::new_legal(board);
     let all_moves = [
         order_captures(
@@ -133,5 +144,19 @@ pub fn quiescence_alpha_beta(
     alpha: BoardEvaluation,
     beta: BoardEvaluation,
 ) -> (ChessMove, BoardEvaluation) { // (_, eval)
-    todo!()
+    let mut best_move = ChessMove::default();
+
+    if board.status() == BoardStatus::Checkmate {
+        return match board.side_to_move() {
+            Color::White => (best_move, BoardEvaluation::BlackMate(0)), // black has checkmated white
+            Color::Black => (best_move, BoardEvaluation::WhiteMate(0)),
+        }
+    }
+
+    if board.status() == BoardStatus::Stalemate {
+        return (best_move, BoardEvaluation::PieceScore(Centipawns::new(0)));
+    }
+
+    ;
+    ;
 }

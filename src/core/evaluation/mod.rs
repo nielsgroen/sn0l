@@ -2,6 +2,8 @@ use std::ops::BitAnd;
 use chess::{BitBoard, Board, BoardStatus, Color};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
+mod incremental;
+
 pub fn single_evaluation(board: &Board) -> BoardEvaluation {
     if board.status() == BoardStatus::Checkmate {
         return match board.side_to_move() {

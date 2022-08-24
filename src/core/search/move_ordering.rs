@@ -24,28 +24,26 @@ pub fn order_captures(
         if let Some(chess_move_info) = transposition_table.get(&board_new) {
             moves.push((chess_move, chess_move_info.evaluation));
         } else {
+            // TODO: REPLACE THIS LOGIC WITH THE ACTUAL INCREMENTALLY UPDATED BOARD EVALUATION!
+            // TODO: INCREMENTAL STATIC EVAL WILL BE WRONG UNTIL THIS IS FIXED
+            // note: this ordering is not based on incremental static evaluation
+            // but instead on `val captee` - `val capturer`
+            // Since, it may generally be desirable to take with the lesser piece first.
             let source_piece = board.piece_on(chess_move.get_source()).expect("capture move has no source piece");
             let target_piece = board.piece_on(chess_move.get_dest()).expect("capture move has no captured piece");
             let promotion = chess_move.get_promotion();
 
             let mut chess_move_score = match promotion {
-                Some(promo) => piece_value(target_piece) - piece_value(source_piece) + piece_value(promo),
+                Some(promo) => piece_value(target_piece) - piece_value(source_piece) + piece_value(promo) + Centipawns::new(-1),
                 _ => piece_value(target_piece) - piece_value(source_piece),
             };
 
             // Need to know the running score to properly compare with the positions that
             // are already in the transposition table
-            let grounded_piece_score = match current_evaluation {
-                BoardEvaluation::WhiteMate(_) => None,
-                BoardEvaluation::PieceScore(x) => Some(x),
-                BoardEvaluation::BlackMate(_) => None,
+            match current_evaluation {
+                BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(x + chess_move_score)));
+                _ => panic!("The current_evaluation should be a simple eval for calculating the static score incrementally"),
             };
-
-            if let Some(score) = grounded_piece_score {
-                chess_move_score += score;
-            }
-
-            moves.push((chess_move, BoardEvaluation::PieceScore(chess_move_score)));
         }
     }
 
@@ -93,17 +91,10 @@ pub fn order_non_captures(
 
             // Need to know the running score to properly compare with the positions that
             // are already in the transposition table
-            let grounded_piece_score = match current_evaluation {
-                BoardEvaluation::WhiteMate(_) => None,
-                BoardEvaluation::PieceScore(x) => Some(x),
-                BoardEvaluation::BlackMate(_) => None,
+            match current_evaluation {
+                BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(x as i64 + target_score as i64 - source_score))));
+                _ => panic!("The current_evaluation should be a simple eval for calculating the static score incrementally"),
             };
-
-            if let Some(grouned_score) = grounded_piece_score {
-                moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(grouned_score as i64 + target_score as i64 - source_score))));
-            } else {
-                moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(target_score as i64 - source_score))));
-            }
         }
     }
 

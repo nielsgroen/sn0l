@@ -1,5 +1,5 @@
 use chess;
-use chess::{Board, Color, Piece};
+use chess::{Board, Color, Piece, Square};
 
 use crate::core::score::Centipawns;
 
@@ -196,6 +196,6 @@ pub fn color_pawn_table(color: chess::Color) -> [u64; 64] {
 }
 
 
-pub fn determine_piece_score(board: &Board, color: chess::Color, piece: chess::Piece) -> Centipawns {
-    todo!()
+pub fn determine_piece_score(square: Square, color: chess::Color, piece: chess::Piece) -> Centipawns {
+    Centipawns::new(piece_table(color, piece)[square])
 }
