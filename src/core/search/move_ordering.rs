@@ -5,7 +5,7 @@ use crate::core::search::transposition::TranspositionTable;
 
 pub fn order_captures(
     board: &Board,
-    current_evaluation: BoardEvaluation,
+    // current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
@@ -24,8 +24,6 @@ pub fn order_captures(
         if let Some(chess_move_info) = transposition_table.get(&board_new) {
             moves.push((chess_move, chess_move_info.evaluation));
         } else {
-            // TODO: REPLACE THIS LOGIC WITH THE ACTUAL INCREMENTALLY UPDATED BOARD EVALUATION!
-            // TODO: INCREMENTAL STATIC EVAL WILL BE WRONG UNTIL THIS IS FIXED
             // note: this ordering is not based on incremental static evaluation
             // but instead on `val captee` - `val capturer`
             // Since, it may generally be desirable to take with the lesser piece first.
@@ -42,8 +40,15 @@ pub fn order_captures(
             // are already in the transposition table
             match current_evaluation {
                 BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(x + chess_move_score)));
-                _ => panic!("The current_evaluation should be a simple eval for calculating the static score incrementally"),
-            };
+                // This is a degeneracy in move ordering
+                // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
+                // All boards not in Transposition table are irrelevant since mate is already guaranteed
+                // => Return worst possible eval => These boards (should) get pruned
+                _ => match board.side_to_move() {
+                    Color::White => BoardEvaluation::BlackMate(0),
+                    Color::Black => BoardEvaluation::WhiteMate(0),
+                },
+            }
         }
     }
 
@@ -59,7 +64,7 @@ pub fn order_captures(
 /// Assumes captures have already been run exhausted from the MoveGen
 pub fn order_non_captures(
     board: &Board,
-    current_evaluation: BoardEvaluation,
+    // current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
@@ -93,7 +98,14 @@ pub fn order_non_captures(
             // are already in the transposition table
             match current_evaluation {
                 BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(x as i64 + target_score as i64 - source_score))));
-                _ => panic!("The current_evaluation should be a simple eval for calculating the static score incrementally"),
+                // This is a degeneracy in move ordering
+                // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
+                // All boards not in Transposition table are irrelevant since mate is already guaranteed
+                // => Return worst possible eval => These boards (should) get pruned
+                _ => match board.side_to_move() {
+                    Color::White => BoardEvaluation::BlackMate(0),
+                    Color::Black => BoardEvaluation::WhiteMate(0),
+                },
             };
         }
     }

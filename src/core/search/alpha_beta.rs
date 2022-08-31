@@ -19,7 +19,7 @@ pub fn search_depth_pruned(
     let (chess_move, score) = search_alpha_beta(
         board,
         transposition_table,
-        base_evaluation,
+        // base_evaluation,
         BoardEvaluation::BlackMate(0),
         BoardEvaluation::WhiteMate(0),
         0,
@@ -32,7 +32,7 @@ pub fn search_depth_pruned(
 pub fn search_alpha_beta(
     board: &Board,
     transposition_table: &mut TranspositionTable,
-    current_evaluation: BoardEvaluation,
+    // current_evaluation: BoardEvaluation,
     mut alpha: BoardEvaluation,
     mut beta: BoardEvaluation,
     current_depth: u32,
@@ -57,7 +57,7 @@ pub fn search_alpha_beta(
         return quiescence_alpha_beta(
             board,
             transposition_table,
-            current_evaluation,
+            // current_evaluation,
             alpha,
             beta,
         );
@@ -67,13 +67,13 @@ pub fn search_alpha_beta(
     let all_moves = [
         order_captures(
             board,
-            current_evaluation,
+            // current_evaluation,
             transposition_table,
             &mut move_gen,
         ),
         order_non_captures(
             board,
-            current_evaluation,
+            // current_evaluation,
             transposition_table,
             &mut move_gen,
         ),
@@ -87,7 +87,7 @@ pub fn search_alpha_beta(
                 let (_, _, eval) = search_alpha_beta(
                     &board.make_move_new(*chess_move),
                     transposition_table,
-                    *move_evaluation,
+                    // *move_evaluation,
                     alpha,
                     beta,
                     current_depth + 1,
@@ -105,7 +105,7 @@ pub fn search_alpha_beta(
             }
         }
 
-        return (best_move, best_eval);
+        (best_move, best_eval)
     } else { // black to play
         let mut best_eval = BoardEvaluation::WhiteMate(0);
 
@@ -114,7 +114,7 @@ pub fn search_alpha_beta(
                 let (_, eval) = search_alpha_beta(
                     &board.make_move_new(*chess_move),
                     transposition_table,
-                    *move_evaluation,
+                    // *move_evaluation,
                     alpha,
                     beta,
                     current_depth + 1,
@@ -132,7 +132,7 @@ pub fn search_alpha_beta(
             }
         }
 
-        return (best_move, best_eval);
+        (best_move, best_eval)
     }
 }
 
@@ -140,9 +140,9 @@ pub fn search_alpha_beta(
 pub fn quiescence_alpha_beta(
     board: &Board,
     transposition_table: &mut TranspositionTable,
-    current_evaluation: BoardEvaluation,
-    alpha: BoardEvaluation,
-    beta: BoardEvaluation,
+    // current_evaluation: BoardEvaluation,
+    mut alpha: BoardEvaluation,
+    mut beta: BoardEvaluation,
 ) -> (ChessMove, BoardEvaluation) { // (_, eval)
     let mut best_move = ChessMove::default();
 
@@ -157,6 +157,57 @@ pub fn quiescence_alpha_beta(
         return (best_move, BoardEvaluation::PieceScore(Centipawns::new(0)));
     }
 
-    ;
-    ;
+    let mut move_gen = MoveGen::new_legal(&board);
+
+    let moves = order_captures(
+        &board,
+        transposition_table,
+        &mut move_gen,
+    );
+
+    if board.side_to_move() == Color::White {
+        let mut best_eval = BoardEvaluation::BlackMate(0);
+
+        for (chess_move, move_evaluation) in moves.iter() {
+            let (_, _, eval) = quiescence_alpha_beta(
+                &board.make_move_new(*chess_move),
+                transposition_table,
+                alpha,
+                beta,
+            );
+            if eval >= best_eval {
+                best_eval = eval;
+                best_move = *chess_move;
+            }
+
+            alpha = max(alpha, eval);
+            if beta <= alpha {
+                return (best_move, best_eval);
+            }
+        }
+
+        (best_move, best_eval)
+    } else { // black to play
+        let mut best_eval = BoardEvaluation::WhiteMate(0);
+
+        for (chess_move, move_evaluation) in moves.iter() {
+            let (_, eval) = quiescence_alpha_beta(
+                &board.make_move_new(*chess_move),
+                transposition_table,
+                alpha,
+                beta,
+            );
+            if eval <= best_eval {
+                best_eval = eval;
+                best_move = *chess_move;
+            }
+
+            beta = min(beta, eval);
+            if beta <= alpha {
+                return (best_move, best_eval);
+            }
+        }
+
+        (best_move, best_eval)
+    }
 }
