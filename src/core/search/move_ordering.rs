@@ -5,11 +5,13 @@ use crate::core::search::transposition::TranspositionTable;
 
 pub fn order_captures(
     board: &Board,
-    // current_evaluation: BoardEvaluation,
+    current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
     // Order by `val captee` - `val capturer` (+ `val promotion`)
+
+    let our_color = board.side_to_move();
 
     // Make extra sure we're only looking at the capture moves
     move_generator.set_iterator_mask(*board.color_combined(!board.side_to_move()));
@@ -38,25 +40,28 @@ pub fn order_captures(
 
             // Need to know the running score to properly compare with the positions that
             // are already in the transposition table
-            match current_evaluation {
-                BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(x + chess_move_score)));
-                // This is a degeneracy in move ordering
-                // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
-                // All boards not in Transposition table are irrelevant since mate is already guaranteed
-                // => Return worst possible eval => These boards (should) get pruned
-                _ => match board.side_to_move() {
-                    Color::White => BoardEvaluation::BlackMate(0),
-                    Color::Black => BoardEvaluation::WhiteMate(0),
+            moves.push((
+                chess_move,
+                match current_evaluation {
+                    BoardEvaluation::PieceScore(x) => BoardEvaluation::PieceScore(x + chess_move_score),
+                    // This is a degeneracy in move ordering
+                    // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
+                    // All boards not in Transposition table are irrelevant since mate is already guaranteed
+                    // => Return worst possible eval => These boards (should) get pruned
+                    _ => match board.side_to_move() {
+                        Color::White => BoardEvaluation::BlackMate(0),
+                        Color::Black => BoardEvaluation::WhiteMate(0),
+                    }
                 },
-            }
+            ));
         }
     }
 
-    moves.sort_by_key(|(_, a)| a);
+    moves.sort_by_key(|(_, a)| *a);
 
     match our_color { // Make sure to reverse order if black is making the move
         Color::White => moves,
-        Color::Black => moves.iter().rev().collect(),
+        Color::Black => moves.into_iter().rev().collect(),
     }
 }
 
@@ -64,7 +69,7 @@ pub fn order_captures(
 /// Assumes captures have already been run exhausted from the MoveGen
 pub fn order_non_captures(
     board: &Board,
-    // current_evaluation: BoardEvaluation,
+    current_evaluation: BoardEvaluation,
     transposition_table: &mut TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
@@ -96,24 +101,27 @@ pub fn order_non_captures(
 
             // Need to know the running score to properly compare with the positions that
             // are already in the transposition table
-            match current_evaluation {
-                BoardEvaluation::PieceScore(x) => moves.push((chess_move, BoardEvaluation::PieceScore(Centipawns::new(x as i64 + target_score as i64 - source_score))));
-                // This is a degeneracy in move ordering
-                // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
-                // All boards not in Transposition table are irrelevant since mate is already guaranteed
-                // => Return worst possible eval => These boards (should) get pruned
-                _ => match board.side_to_move() {
-                    Color::White => BoardEvaluation::BlackMate(0),
-                    Color::Black => BoardEvaluation::WhiteMate(0),
+            moves.push((
+                chess_move,
+                match current_evaluation {
+                    BoardEvaluation::PieceScore(x) => BoardEvaluation::PieceScore(x + Centipawns::new(target_score as i64 - source_score as i64)),
+                    // This is a degeneracy in move ordering
+                    // if the parent board position is a "mate in n" => move ordering is disabled for positions not in Transposition table
+                    // All boards not in Transposition table are irrelevant since mate is already guaranteed
+                    // => Return worst possible eval => These boards (should) get pruned
+                    _ => match board.side_to_move() {
+                        Color::White => BoardEvaluation::BlackMate(0),
+                        Color::Black => BoardEvaluation::WhiteMate(0),
+                    }
                 },
-            };
+            ));
         }
     }
 
-    moves.sort_by_key(|_, a| a);
+    moves.sort_by_key(|(_, a)| *a);
 
     match our_color { // Make sure to reverse order if black is making the move
         Color::White => moves,
-        Color::Black => moves.iter().rev().collect(),
+        Color::Black => moves.into_iter().rev().collect(),
     }
 }

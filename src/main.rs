@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
     let (search_tx, search_rx) = channel::<SearchCommand>();
 
     pre_option_init(input_tx, search_rx);
-    let mut current_board = Board::default();  // TODO move this to the core engine
+    // let mut current_board = Board::default();  // TODO move this to the core engine
     println!("uciok"); // confirm pre-init
 
     loop {
@@ -59,13 +59,13 @@ fn main() -> anyhow::Result<()> {
         match command {
             Command::IsReady => println!("readyok"),  // Main thread unblocked, so must be ready
             Command::Quit => break,
-            Command::SetPosition(board) => current_board = board,
-            Command::Calculate(_) => {
-                // let mut candidate_moves = MoveGen::new_legal(&current_board);
-                // let chosen_move = candidate_moves.next().unwrap();
-                let chosen_move = core::evaluation_old::best_move_depth(&current_board, 3).unwrap();
-                println!("bestmove {}", chosen_move)
-            }
+            // Command::SetPosition(board) => current_board = board,
+            // Command::Calculate(_) => {
+            //     // let mut candidate_moves = MoveGen::new_legal(&current_board);
+            //     // let chosen_move = candidate_moves.next().unwrap();
+            //     let chosen_move = core::evaluation_old::best_move_depth(&current_board, 3).unwrap();
+            //     println!("bestmove {}", chosen_move)
+            // }
             _ => (),  // TODO
         }
     }

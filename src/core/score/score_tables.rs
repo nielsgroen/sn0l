@@ -197,5 +197,5 @@ pub fn color_pawn_table(color: chess::Color) -> [u64; 64] {
 
 
 pub fn determine_piece_score(square: Square, color: chess::Color, piece: chess::Piece) -> Centipawns {
-    Centipawns::new(piece_table(color, piece)[square])
+    Centipawns::new(piece_table(color, piece)[square.to_index()] as i64)
 }

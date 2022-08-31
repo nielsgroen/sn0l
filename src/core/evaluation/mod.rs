@@ -42,6 +42,14 @@ pub fn single_evaluation(board: &Board) -> BoardEvaluation {
     BoardEvaluation::PieceScore(score)
 }
 
+/// Updates an eval so that the Mate(1) becomes Mate(2)
+pub fn bubble_evaluation(evaluation: BoardEvaluation) -> BoardEvaluation {
+    match evaluation {
+        BoardEvaluation::WhiteMate(x) => BoardEvaluation::WhiteMate(x + 1),
+        BoardEvaluation::BlackMate(x) => BoardEvaluation::BlackMate(x + 1),
+        a => a,
+    }
+}
 
 #[cfg(test)]
 mod tests {
