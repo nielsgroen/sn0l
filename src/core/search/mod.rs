@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::mpsc::Receiver;
+use std::time::{Duration, Instant};
 use chess::{Board, Color};
 use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 use transposition::TranspositionTable;
+use crate::core::evaluation::SearchResult;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 
@@ -78,34 +80,15 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
             SearchCommand::SetPosition(board) => main_board = board,
             SearchCommand::NewGame => transposition_table = TranspositionTable::default(),
             SearchCommand::Calculate(options) => {
-                let (chess_move, eval, nodes) = iterative_deepening_search(
+
+                let (search_result, depth, selective_depth) = iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
                     options,
                 );
 
-                println!("bestmove {}", chess_move);
+                println!("bestmove {}", search_result.best_move);
 
-                match (main_board.side_to_move(), eval) {
-                    (Color::White, BoardEvaluation::PieceScore(Centipawns(x))) => {
-                        println!("info score cp {} nodes {}", x, nodes);
-                    },
-                    (Color::White, BoardEvaluation::WhiteMate(x)) => {
-                        println!("info score mate {} nodes {}", x, nodes);
-                    },
-                    (Color::White, BoardEvaluation::BlackMate(x)) => {
-                        println!("info score mate -{} nodes {}", x, nodes);
-                    },
-                    (Color::Black, BoardEvaluation::PieceScore(Centipawns(x))) => {
-                        println!("info score cp {} nodes {}", -x, nodes);
-                    },
-                    (Color::Black, BoardEvaluation::WhiteMate(x)) => {
-                        println!("info score mate -{} nodes {}", x, nodes);
-                    },
-                    (Color::Black, BoardEvaluation::BlackMate(x)) => {
-                        println!("info score mate {} nodes {}", x, nodes);
-                    },
-                }
             },
             SearchCommand::Stop => (),
         }

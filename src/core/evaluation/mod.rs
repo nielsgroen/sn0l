@@ -1,8 +1,43 @@
 use std::ops::BitAnd;
-use chess::{BitBoard, Board, BoardStatus, Color};
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
 mod incremental;
+
+// TODO: Make return type of searches
+pub struct SearchResult {
+    pub best_move: ChessMove,
+    pub board_evaluation: BoardEvaluation,
+    pub nodes_searched: u32,
+    pub critical_path: Vec<ChessMove>, // The line of play of best moves (in reverse order, first move is at the end)
+}
+
+impl SearchResult {
+    pub fn new(
+        best_move: ChessMove,
+        board_evaluation: BoardEvaluation,
+        nodes_searched: Option<u32>,
+        critical_path: Option<Vec<ChessMove>>,
+    ) -> Self {
+        Self {
+            best_move,
+            board_evaluation,
+            nodes_searched: nodes_searched.unwrap_or(1),
+            critical_path: critical_path.unwrap_or(Vec::new()),
+        }
+    }
+}
+
+impl Default for SearchResult {
+    fn default() -> Self {
+        Self {
+            best_move: ChessMove::default(),
+            board_evaluation: BoardEvaluation::PieceScore(Centipawns::new(0)),
+            nodes_searched: 0,
+            critical_path: Vec::new(),
+        }
+    }
+}
 
 pub fn single_evaluation(board: &Board) -> BoardEvaluation {
     if board.status() == BoardStatus::Checkmate {
