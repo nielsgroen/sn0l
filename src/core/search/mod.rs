@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
-use chess::{Board, Color};
+use chess::{Board, ChessMove, Color};
 use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
@@ -12,6 +12,7 @@ use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 
 pub mod transposition;
+mod draw_detection;
 mod iterative_deepening;
 mod move_ordering;
 mod alpha_beta;
@@ -31,10 +32,10 @@ pub enum SearchDepth {
     Depth(u32), // Depth still left to go
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum SearchCommand {
     NewGame,
-    SetPosition(Board),
+    SetPosition(Board, Vec<u64>),
     Calculate(CalculateOptions),
     Stop,
 }
@@ -43,7 +44,7 @@ impl SearchCommand {
     pub fn from_command(command: Command) -> Option<Self> {
         match command {
             Command::NewGame => Some(SearchCommand::NewGame),
-            Command::SetPosition(board) => Some(SearchCommand::SetPosition(board)),
+            Command::SetPosition(board, moves) => Some(SearchCommand::SetPosition(board, moves)),
             Command::Calculate(options) => Some(SearchCommand::Calculate(options)),
             Command::Stop => Some(SearchCommand::Stop),
             _ => None,
@@ -66,24 +67,31 @@ impl SearchCommand {
 //     }
 // }
 
+
+
 /// The function to have a thread start functioning as the search engine.
 pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
 
     // init Transposition Table
     let mut transposition_table: TranspositionTable = TranspositionTable::default();
     let mut main_board: Board = Board::default();
+    let mut visited_boards: Vec<u64> = Vec::new(); // List of board hashes
 
     loop {
         let command = search_rx.recv().expect("search receiver error");
 
         match command {
-            SearchCommand::SetPosition(board) => main_board = board,
+            SearchCommand::SetPosition(board, visited) => {
+                main_board = board;
+                visited_boards = visited;
+            },
             SearchCommand::NewGame => transposition_table = TranspositionTable::default(),
             SearchCommand::Calculate(options) => {
 
                 let (search_result, depth, selective_depth) = iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
+                    visited_boards.clone(),
                     options,
                 );
 

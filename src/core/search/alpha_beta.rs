@@ -2,6 +2,7 @@ use std::cmp::{max, min};
 use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, SearchResult, single_evaluation};
 use crate::core::score::{BoardEvaluation, Centipawns};
+use crate::core::search::draw_detection::detect_draw_incremental;
 use crate::core::search::move_ordering::{order_captures, order_non_captures};
 use crate::core::search::SearchDepth;
 use crate::core::search::transposition::{TranspositionTable, update_transpositions};
@@ -12,6 +13,7 @@ use crate::core::search::transposition::{TranspositionTable, update_transpositio
 pub fn search_depth_pruned(
     board: &Board,
     transposition_table: &mut TranspositionTable,
+    visited_boards: Vec<u64>,
     depth: u32,
     selective_depth: Option<u32>,
 ) -> SearchResult {
@@ -21,6 +23,7 @@ pub fn search_depth_pruned(
     let search_result = search_alpha_beta(
         board,
         transposition_table,
+        visited_boards,
         // base_evaluation,
         BoardEvaluation::BlackMate(0),
         BoardEvaluation::WhiteMate(0),
@@ -35,6 +38,7 @@ pub fn search_depth_pruned(
 pub fn search_alpha_beta(
     board: &Board,
     transposition_table: &mut TranspositionTable,
+    mut visited_boards: Vec<u64>,
     // current_evaluation: BoardEvaluation,
     mut alpha: BoardEvaluation,
     mut beta: BoardEvaluation,
@@ -66,6 +70,22 @@ pub fn search_alpha_beta(
             None,
         );
     }
+
+    // Do draw detection before quiescence search
+    // => No draw detection necessary when only capturing
+    // But still need draw detection on last move before quiescence search
+    visited_boards.push(board.get_hash());
+    let visited_boards = visited_boards;
+
+    if detect_draw_incremental(&visited_boards) {
+        return SearchResult::new(
+            best_move,
+            BoardEvaluation::PieceScore(Centipawns::new(0)),
+            None,
+            None,
+        );
+    }
+
 
     if current_depth >= max_depth {
         return quiescence_alpha_beta(
@@ -105,6 +125,7 @@ pub fn search_alpha_beta(
                 search_result = search_alpha_beta(
                     &board.make_move_new(*chess_move),
                     transposition_table,
+                    visited_boards.clone(),
                     // *move_evaluation,
                     alpha,
                     beta,
@@ -166,6 +187,7 @@ pub fn search_alpha_beta(
                     &board.make_move_new(*chess_move),
                     transposition_table,
                     // *move_evaluation,
+                    visited_boards.clone(),
                     alpha,
                     beta,
                     current_depth + 1,
@@ -311,7 +333,7 @@ pub fn quiescence_alpha_beta(
                 alpha,
                 beta,
                 current_depth + 1,
-                max_selective_depth,
+                max_selective_depth - 1, // Quiescence should cut off at even depth, and we're skipping a move
             );
             nodes_searched += search_result.nodes_searched;
 
@@ -321,6 +343,21 @@ pub fn quiescence_alpha_beta(
                 best_path = Vec::new(); // Not an actual legal move => no actual line of play further
             }
         }
+
+        // Or take the static evaluation with a penalty, to remove the amount of blunders
+        // due to "having to capture, or give up the turn"
+        match current_evaluation {
+            BoardEvaluation::PieceScore(x) => {
+                let penalized_score = BoardEvaluation::PieceScore(x - Centipawns::new(54));
+
+                if penalized_score > best_eval {
+                    best_eval = penalized_score;
+                    best_move = ChessMove::default();
+                    best_path = Vec::new();
+                }
+            },
+            _ => (),
+        };
 
         best_eval = bubble_evaluation(best_eval);
         update_transpositions(
@@ -388,7 +425,7 @@ pub fn quiescence_alpha_beta(
                 alpha,
                 beta,
                 current_depth + 1,
-                max_selective_depth,
+                max_selective_depth - 1, // Quiescence should cut off at even depth, and we're skipping a move
             );
             nodes_searched += search_result.nodes_searched;
 
@@ -398,6 +435,21 @@ pub fn quiescence_alpha_beta(
                 best_path = Vec::new(); // Not an actual legal move => no actual line of play further
             }
         }
+
+        // Or take the static evaluation with a penalty, to remove the amount of blunders
+        // due to "having to capture, or give up the turn"
+        match current_evaluation {
+            BoardEvaluation::PieceScore(x) => {
+                let penalized_score = BoardEvaluation::PieceScore(x + Centipawns::new(54));
+
+                if penalized_score < best_eval {
+                    best_eval = penalized_score;
+                    best_move = ChessMove::default();
+                    best_path = Vec::new();
+                }
+            },
+            _ => (),
+        };
 
         best_eval = bubble_evaluation(best_eval);
         update_transpositions(

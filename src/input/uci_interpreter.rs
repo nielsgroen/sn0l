@@ -29,6 +29,24 @@ impl UciInterpreter {
                     args_owned.push(arg.to_string());
                 }
                 Board::from_str(&args_owned.join(" ")).expect("invalid FEN code")
+
+                // TODO correctly parse FEN + moves
+            },
+            _ => panic!("unsupported position parameters")
+        }
+    }
+
+    fn determine_pre_move_board<'a>(mut args: impl Iterator<Item=&'a str>) -> Board {
+        match args.next() {
+            Some("startpos") => {
+                Board::default()
+            },
+            Some("fen") => {
+                let mut args_owned: Vec<String> = Vec::new();
+                for arg in args {
+                    args_owned.push(arg.to_string());
+                }
+                Board::from_str(&args_owned.join(" ")).expect("invalid FEN code")
             },
             _ => panic!("unsupported position parameters")
         }
@@ -57,6 +75,36 @@ impl UciInterpreter {
             _ => panic!("unknown debug state"),
         }
     }
+
+    /// Returns a vector of hashes of visited board positions
+    pub fn determine_visited_boards<'a>(board: &Board, mut args: impl Iterator<Item=&'a str>) -> Vec<u64> {
+        let moves = {
+            let mut result = Vec::new();
+            let mut listing_moves = false;
+            for arg in args {
+                if listing_moves {
+                    result.push(ChessMove::from_str(arg).expect("expected a chess move"));
+                } else {
+                    if arg == "moves" {
+                        listing_moves = true;
+                    }
+                }
+            }
+            result
+        };
+
+        let mut result = Vec::from([board.get_hash()]);
+
+        let mut current_board = *board;
+        for chess_move in moves {
+            current_board = current_board.make_move_new(chess_move);
+            result.push(current_board.get_hash());
+        }
+        // Remove last board, since that board is the actual one in play,
+        result.pop();
+
+        result
+    }
 }
 
 impl ProtocolInterpreter for UciInterpreter {
@@ -72,7 +120,14 @@ impl ProtocolInterpreter for UciInterpreter {
             "isready" => Some(Command::IsReady),
             // "setoption" => ,
             "ucinewgame" => Some(Command::NewGame),
-            "position" => Some(Command::SetPosition(UciInterpreter::determine_board(split.into_iter()))),
+            "position" => {
+                let board = UciInterpreter::determine_board(split.clone().into_iter());
+                let pre_move_board = UciInterpreter::determine_pre_move_board(split.clone().into_iter());
+                Some(Command::SetPosition(
+                    board.clone(),
+                    UciInterpreter::determine_visited_boards(&pre_move_board, split.into_iter())
+                ))
+            },
             "go" => Some(Command::Calculate(UciInterpreter::determine_calculate_options(split.into_iter()))),
             "stop" => Some(Command::Stop),
             "quit" => Some(Command::Quit),

@@ -13,7 +13,7 @@ pub fn listen_to_stdin(input_tx: Sender<Command>) -> ! {
 
         let command = UciInterpreter::line_to_command(&buffer);
 
-        if let Some(val) = command {
+        if let Some(val) = command.clone() {
             input_tx.send(val).unwrap();
         }
 

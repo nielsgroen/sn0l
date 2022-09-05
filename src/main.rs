@@ -52,7 +52,7 @@ fn main() -> anyhow::Result<()> {
     loop {
         let command = input_rx.recv().unwrap();
 
-        if let Some(search_command) = SearchCommand::from_command(command) {
+        if let Some(search_command) = SearchCommand::from_command(command.clone()) {
             search_tx.send(search_command).unwrap();
         }
 

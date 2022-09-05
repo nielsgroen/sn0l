@@ -12,6 +12,7 @@ use crate::input::protocol_interpreter::CalculateOptions;
 pub fn iterative_deepening_search(
     board: &Board,
     transposition_table: &mut TranspositionTable,
+    visited_boards: Vec<u64>, // TODO: use
     options: CalculateOptions,
 ) -> (SearchResult, u32, u32) { // (SearchResult, depth, selective_depth)
     let mut max_search_depth: u32 = 1;
@@ -33,6 +34,7 @@ pub fn iterative_deepening_search(
     let search_result = search_depth_pruned(
         board,
         transposition_table,
+        visited_boards,
         max_search_depth,
         Some(selective_depth), // todo
     );
@@ -59,8 +61,6 @@ fn log_info_search_results(
     depth: u32,
     selective_depth: u32
 ) {
-    let nodes_per_second = search_result.nodes_searched as u128 / duration.as_millis() * 1000;
-
     let score_string = match (side_to_move, search_result.board_evaluation) {
         (Color::White, BoardEvaluation::PieceScore(Centipawns(x))) => {
             format!("cp {}", x)
@@ -90,7 +90,12 @@ fn log_info_search_results(
         .collect::<Vec<_>>()
         .join(" ");
 
-    println!("info nps {nodes_per_second}");
+    let millis = duration.as_millis();
+
+    if millis > 0 {
+        let nodes_per_second = search_result.nodes_searched as u128 / duration.as_millis() * 1000;
+        println!("info nps {nodes_per_second}");
+    }
     println!(
         "info score {score_string} depth {depth} seldepth {selective_depth} nodes {nodes} time {} pv {critical_path}",
         duration.as_millis(),

@@ -1,5 +1,5 @@
 use std::num::NonZeroU32;
-use chess::Board;
+use chess::{Board, ChessMove};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum SupportedProtocols {
@@ -32,7 +32,7 @@ pub enum DebugState {
     Off,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Command {
     DetermineProtocol,
     Identify,
@@ -40,7 +40,7 @@ pub enum Command {
     IsReady,  // queries whether the engine is finished long task, e.g. initializing, loading opening table
     // SetOption {OptionValue},
     NewGame,
-    SetPosition(Board),  // sets the board position for that game
+    SetPosition(Board, Vec<u64>),  // sets the board position for that game
     Calculate(CalculateOptions),  // `go` in UCI: Start calculating
     Stop,  // Stop Calculating, otherwise ignore
     // Ponder,  see UCI doc
