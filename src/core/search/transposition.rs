@@ -8,7 +8,7 @@ use crate::core::search::{SearchDepth, SearchInfo};
 
 pub type TranspositionTable = HashMap<Board, SearchInfo, BuildNoHashHasher<u64>>;
 
-pub fn update_transpositions(
+pub fn update_transposition(
     mut transposition_table: &mut TranspositionTable,
     board: &Board,
     search_depth: SearchDepth,
@@ -35,4 +35,17 @@ pub fn update_transpositions(
             }
         },
     }
+}
+
+pub fn get_transposition<'a>(
+    mut transposition_table: &'a mut TranspositionTable,
+    board: &Board,
+    minimal_search_depth: SearchDepth,
+) -> Option<&'a SearchInfo> {
+    let search_info = transposition_table.get(board)?;
+
+    if search_info.depth_searched.clone() >= minimal_search_depth {
+        return Some(search_info);
+    }
+    None
 }

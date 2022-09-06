@@ -5,7 +5,7 @@ use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::draw_detection::detect_draw_incremental;
 use crate::core::search::move_ordering::{order_captures, order_non_captures};
 use crate::core::search::SearchDepth;
-use crate::core::search::transposition::{TranspositionTable, update_transpositions};
+use crate::core::search::transposition::{get_transposition, TranspositionTable, update_transposition};
 
 /// The module for alpha-beta search;
 
@@ -115,15 +115,43 @@ pub fn search_alpha_beta(
         ),
     ];
 
+    let mut best_eval = BoardEvaluation::PieceScore(Centipawns::new(0));
+    let mut best_path = Vec::new();
+    let mut search_result = SearchResult::default();
+
     if board.side_to_move() == Color::White {
-        let mut best_eval = BoardEvaluation::BlackMate(0);
-        let mut best_path = Vec::new();
-        let mut search_result = SearchResult::default();
+        best_eval = BoardEvaluation::BlackMate(0);
 
         for moves in all_moves { // first capture moves, then non-capture moves
             for (chess_move, move_evaluation) in moves.iter() {
+                let new_board = &board.make_move_new(*chess_move);
+
+                // if let Some(search_info) = get_transposition(
+                //     transposition_table,
+                //     &new_board,
+                //     SearchDepth::Depth(max_depth - current_depth - 1),
+                // ) {
+                //     search_result = SearchResult::new(
+                //         ChessMove::default(),
+                //         search_info.evaluation,
+                //         None,
+                //         None,
+                //     );
+                // } else {
+                //     search_result = search_alpha_beta(
+                //         new_board,
+                //         transposition_table,
+                //         visited_boards.clone(),
+                //         // *move_evaluation,
+                //         alpha,
+                //         beta,
+                //         current_depth + 1,
+                //         max_depth,
+                //         max_selective_depth,
+                //     );
+                // }
                 search_result = search_alpha_beta(
-                    &board.make_move_new(*chess_move),
+                    new_board,
                     transposition_table,
                     visited_boards.clone(),
                     // *move_evaluation,
@@ -144,7 +172,7 @@ pub fn search_alpha_beta(
                 alpha = max(alpha, search_result.board_evaluation);
                 if beta < alpha {
                     best_eval = bubble_evaluation(best_eval);
-                    update_transpositions(
+                    update_transposition(
                         transposition_table,
                         board,
                         SearchDepth::Depth(max_depth - current_depth),
@@ -162,7 +190,7 @@ pub fn search_alpha_beta(
         }
 
         best_eval = bubble_evaluation(best_eval);
-        update_transpositions(
+        update_transposition(
             transposition_table,
             board,
             SearchDepth::Depth(max_depth - current_depth),
@@ -177,23 +205,48 @@ pub fn search_alpha_beta(
             Some(best_path),
         )
     } else { // black to play
-        let mut best_eval = BoardEvaluation::WhiteMate(0);
-        let mut best_path = Vec::new();
-        let mut search_result = SearchResult::default();
+        best_eval = BoardEvaluation::WhiteMate(0);
 
         for moves in all_moves {
             for (chess_move, move_evaluation) in moves.iter() {
+                let new_board = &board.make_move_new(*chess_move);
+
+                // if let Some(search_info) = get_transposition(
+                //     transposition_table,
+                //     &new_board,
+                //     SearchDepth::Depth(max_depth - current_depth - 1),
+                // ) {
+                //     search_result = SearchResult::new(
+                //         ChessMove::default(),
+                //         search_info.evaluation,
+                //         None,
+                //         None,
+                //     );
+                // } else {
+                //     search_result = search_alpha_beta(
+                //         new_board,
+                //         transposition_table,
+                //         visited_boards.clone(),
+                //         // *move_evaluation,
+                //         alpha,
+                //         beta,
+                //         current_depth + 1,
+                //         max_depth,
+                //         max_selective_depth,
+                //     );
+                // }
                 search_result = search_alpha_beta(
-                    &board.make_move_new(*chess_move),
+                    new_board,
                     transposition_table,
-                    // *move_evaluation,
                     visited_boards.clone(),
+                    // *move_evaluation,
                     alpha,
                     beta,
                     current_depth + 1,
                     max_depth,
                     max_selective_depth,
                 );
+
                 nodes_searched += search_result.nodes_searched;
 
                 if search_result.board_evaluation <= best_eval {
@@ -205,7 +258,7 @@ pub fn search_alpha_beta(
                 beta = min(beta, search_result.board_evaluation);
                 if beta < alpha {
                     best_eval = bubble_evaluation(best_eval);
-                    update_transpositions(
+                    update_transposition(
                         transposition_table,
                         board,
                         SearchDepth::Depth(max_depth - current_depth),
@@ -223,7 +276,7 @@ pub fn search_alpha_beta(
         }
 
         best_eval = bubble_evaluation(best_eval);
-        update_transpositions(
+        update_transposition(
             transposition_table,
             board,
             SearchDepth::Depth(max_depth - current_depth),
@@ -306,7 +359,7 @@ pub fn quiescence_alpha_beta(
             alpha = max(alpha, search_result.board_evaluation);
             if beta < alpha {
                 best_eval = bubble_evaluation(best_eval);
-                update_transpositions(
+                update_transposition(
                     transposition_table,
                     board,
                     SearchDepth::Quiescent,
@@ -360,7 +413,7 @@ pub fn quiescence_alpha_beta(
         };
 
         best_eval = bubble_evaluation(best_eval);
-        update_transpositions(
+        update_transposition(
             transposition_table,
             board,
             SearchDepth::Quiescent,
@@ -399,7 +452,7 @@ pub fn quiescence_alpha_beta(
             beta = min(beta, search_result.board_evaluation);
             if beta < alpha {
                 best_eval = bubble_evaluation(best_eval);
-                update_transpositions(
+                update_transposition(
                     transposition_table,
                     board,
                     SearchDepth::Quiescent,
@@ -452,7 +505,7 @@ pub fn quiescence_alpha_beta(
         };
 
         best_eval = bubble_evaluation(best_eval);
-        update_transpositions(
+        update_transposition(
             transposition_table,
             board,
             SearchDepth::Quiescent,

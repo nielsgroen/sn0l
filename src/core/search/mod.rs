@@ -28,7 +28,8 @@ pub struct SearchInfo {
 pub enum SearchDepth {
     // Ordering matters for derive Ord
     Single, // Did a simple single board eval
-    Quiescent, // Performed Quiescence Search from this node
+    QuiescentDepth(u32), // Performed Quiescence search at depth `x` from here.
+    Quiescent, // Performed exhaustive Quiescence Search from this node
     Depth(u32), // Depth still left to go
 }
 
