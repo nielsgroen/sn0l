@@ -1,7 +1,7 @@
 use chess::{Board, ChessMove, Color, EMPTY, MoveGen};
 use crate::core::score::{BoardEvaluation, Centipawns, piece_value};
 use crate::core::score::score_tables::piece_table;
-use crate::core::search::transposition::TranspositionTable;
+use crate::core::search::transpositions::TranspositionTable;
 
 pub fn order_captures(
     board: &Board,

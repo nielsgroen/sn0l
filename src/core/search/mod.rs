@@ -6,12 +6,15 @@ use chess::{Board, ChessMove, Color};
 use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
-use transposition::TranspositionTable;
-use crate::core::evaluation::SearchResult;
+use transpositions::TranspositionTable;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::iterative_deepening::iterative_deepening_search;
+use crate::core::search::search_result::debug_search_result::DebugSearchResult;
+use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
+use crate::core::search::search_result::SearchResult;
 
-pub mod transposition;
+mod search_result;
+pub mod transpositions;
 mod draw_detection;
 mod iterative_deepening;
 mod move_ordering;
@@ -89,14 +92,14 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
             SearchCommand::NewGame => transposition_table = TranspositionTable::default(),
             SearchCommand::Calculate(options) => {
 
-                let (search_result, depth, selective_depth) = iterative_deepening_search(
+                let (search_result, depth, selective_depth): (MinimalSearchResult, _, _) = iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
                     visited_boards.clone(),
                     options,
                 );
 
-                println!("bestmove {}", search_result.best_move);
+                println!("bestmove {}", search_result.best_move());
 
             },
             SearchCommand::Stop => (),

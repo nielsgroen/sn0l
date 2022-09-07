@@ -1,20 +1,21 @@
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use chess::{Board, ChessMove, Color};
-use crate::core::evaluation::SearchResult;
+use super::search_result::debug_search_result::DebugSearchResult;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::alpha_beta::search_depth_pruned;
+use crate::core::search::search_result::SearchResult;
 
-use crate::core::search::transposition::TranspositionTable;
+use crate::core::search::transpositions::TranspositionTable;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 
-pub fn iterative_deepening_search(
+pub fn iterative_deepening_search<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut TranspositionTable,
     visited_boards: Vec<u64>, // TODO: use
     options: CalculateOptions,
-) -> (SearchResult, u32, u32) { // (SearchResult, depth, selective_depth)
+) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
     let mut max_search_depth: u32 = 1;
 
     match options {
@@ -31,7 +32,7 @@ pub fn iterative_deepening_search(
     // }
 
     let now = Instant::now();
-    let search_result = search_depth_pruned(
+    let search_result: T = search_depth_pruned(
         board,
         transposition_table,
         visited_boards,
@@ -54,14 +55,14 @@ pub fn iterative_deepening_search(
     )
 }
 
-fn log_info_search_results(
-    search_result: &SearchResult,
+fn log_info_search_results<T: SearchResult>(
+    search_result: &T,
     side_to_move: Color,
     duration: Duration,
     depth: u32,
     selective_depth: u32
 ) {
-    let score_string = match (side_to_move, search_result.board_evaluation) {
+    let score_string = match (side_to_move, search_result.board_evaluation()) {
         (Color::White, BoardEvaluation::PieceScore(Centipawns(x))) => {
             format!("cp {}", x)
         },
@@ -82,22 +83,34 @@ fn log_info_search_results(
         },
     };
 
-    let nodes = search_result.nodes_searched;
-    let critical_path = search_result.critical_path.clone()
-        .into_iter()
-        .rev()
-        .map(|x| x.to_string())
-        .collect::<Vec<_>>()
-        .join(" ");
+    let nodes_string = match search_result.nodes_searched() {
+        None => "".to_string(),
+        Some(x) => format!("nodes {x}"),
+    };
+
+    let critical_path_string;
+    if search_result.critical_path().is_some() {
+        let critical_path = search_result.critical_path()
+            .clone()
+            .unwrap()
+            .into_iter()
+            // .rev()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        critical_path_string = format!("pv {critical_path}");
+    } else {
+        critical_path_string = "".to_string();
+    }
 
     let millis = duration.as_millis();
 
-    if millis > 0 {
-        let nodes_per_second = search_result.nodes_searched as u128 / duration.as_millis() * 1000;
+    if millis > 0 && search_result.nodes_searched().is_some() {
+        let nodes_per_second = search_result.nodes_searched().unwrap() as u128 / duration.as_millis() * 1000;
         println!("info nps {nodes_per_second}");
     }
     println!(
-        "info score {score_string} depth {depth} seldepth {selective_depth} nodes {nodes} time {} pv {critical_path}",
+        "info score {score_string} depth {depth} seldepth {selective_depth} {nodes_string} time {} {critical_path_string}",
         duration.as_millis(),
     );
 }
