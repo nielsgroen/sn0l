@@ -122,7 +122,7 @@ pub fn search_alpha_beta(
     if board.side_to_move() == Color::White {
         best_eval = BoardEvaluation::BlackMate(0);
 
-        for moves in all_moves { // first capture moves, then non-capture moves
+        'outer: for moves in all_moves { // first capture moves, then non-capture moves
             for (chess_move, move_evaluation) in moves.iter() {
                 let new_board = &board.make_move_new(*chess_move);
 
@@ -171,43 +171,15 @@ pub fn search_alpha_beta(
 
                 alpha = max(alpha, search_result.board_evaluation);
                 if beta < alpha {
-                    best_eval = bubble_evaluation(best_eval);
-                    update_transposition(
-                        transposition_table,
-                        board,
-                        SearchDepth::Depth(max_depth - current_depth),
-                        best_eval,
-                    );
-                    best_path.push(best_move);
-                    return SearchResult::new(
-                        best_move,
-                        best_eval,
-                        Some(nodes_searched),
-                        Some(best_path),
-                    );
+                    break 'outer;
                 }
             }
         }
 
-        best_eval = bubble_evaluation(best_eval);
-        update_transposition(
-            transposition_table,
-            board,
-            SearchDepth::Depth(max_depth - current_depth),
-            best_eval,
-        );
-
-        best_path.push(best_move);
-        SearchResult::new(
-            best_move,
-            best_eval,
-            Some(nodes_searched),
-            Some(best_path),
-        )
     } else { // black to play
         best_eval = BoardEvaluation::WhiteMate(0);
 
-        for moves in all_moves {
+        'outer: for moves in all_moves {
             for (chess_move, move_evaluation) in moves.iter() {
                 let new_board = &board.make_move_new(*chess_move);
 
@@ -257,39 +229,27 @@ pub fn search_alpha_beta(
 
                 beta = min(beta, search_result.board_evaluation);
                 if beta < alpha {
-                    best_eval = bubble_evaluation(best_eval);
-                    update_transposition(
-                        transposition_table,
-                        board,
-                        SearchDepth::Depth(max_depth - current_depth),
-                        best_eval,
-                    );
-                    best_path.push(best_move);
-                    return SearchResult::new(
-                        best_move,
-                        best_eval,
-                        Some(nodes_searched),
-                        Some(best_path),
-                    );
+                    break 'outer;
                 }
             }
         }
-
-        best_eval = bubble_evaluation(best_eval);
-        update_transposition(
-            transposition_table,
-            board,
-            SearchDepth::Depth(max_depth - current_depth),
-            best_eval,
-        );
-        best_path.push(best_move);
-        SearchResult::new(
-            best_move,
-            best_eval,
-            Some(nodes_searched),
-            Some(best_path),
-        )
     }
+
+    best_eval = bubble_evaluation(best_eval);
+    update_transposition(
+        transposition_table,
+        board,
+        SearchDepth::Depth(max_depth - current_depth),
+        best_eval,
+    );
+
+    best_path.push(best_move);
+    SearchResult::new(
+        best_move,
+        best_eval,
+        Some(nodes_searched),
+        Some(best_path),
+    )
 }
 
 
