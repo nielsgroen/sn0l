@@ -6,14 +6,14 @@ use crate::core::search::draw_detection::detect_draw_incremental;
 use crate::core::search::move_ordering::{order_captures, order_non_captures};
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::SearchDepth;
-use crate::core::search::transpositions::{get_transposition, TranspositionTable, update_transposition};
+use crate::core::search::transpositions::TranspositionTable;
 
 /// The module for alpha-beta search;
 
 
 pub fn search_depth_pruned<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     visited_boards: Vec<u64>,
     depth: u32,
     selective_depth: Option<u32>,
@@ -38,7 +38,7 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
 
 pub fn search_alpha_beta<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     mut visited_boards: Vec<u64>,
     // current_evaluation: BoardEvaluation,
     mut alpha: BoardEvaluation,
@@ -240,23 +240,22 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     }
 
     best_eval = bubble_evaluation(best_eval);
-    update_transposition(
-        transposition_table,
+    transposition_table.update(
         board,
         SearchDepth::Depth(max_depth - current_depth),
-        best_eval,
+        best_eval
     );
-
     best_search_result.prepend_move(best_move);
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
+    best_search_result.set_board_evaluation(best_eval);
     best_search_result
 }
 
 
 pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     // current_evaluation: BoardEvaluation,
     mut alpha: BoardEvaluation,
     mut beta: BoardEvaluation,
@@ -480,14 +479,13 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     }
 
     best_eval = bubble_evaluation(best_eval);
-    update_transposition(
-        transposition_table,
+    transposition_table.update(
         board,
         SearchDepth::Quiescent,
         best_eval,
     );
-
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
+    best_search_result.set_board_evaluation(best_eval);
     best_search_result
 }

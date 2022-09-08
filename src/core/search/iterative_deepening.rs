@@ -12,7 +12,7 @@ use crate::input::protocol_interpreter::CalculateOptions;
 
 pub fn iterative_deepening_search<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     visited_boards: Vec<u64>, // TODO: use
     options: CalculateOptions,
 ) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)

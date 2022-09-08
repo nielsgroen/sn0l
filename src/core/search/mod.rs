@@ -12,6 +12,8 @@ use crate::core::search::iterative_deepening::iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
 use crate::core::search::search_result::SearchResult;
+use crate::core::search::transpositions::hash_transposition::HashTranspositionTable;
+use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 
 mod search_result;
 pub mod transpositions;
@@ -77,7 +79,7 @@ impl SearchCommand {
 pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
 
     // init Transposition Table
-    let mut transposition_table: TranspositionTable = TranspositionTable::default();
+    let mut transposition_table = NoTranspositionTable::default();
     let mut main_board: Board = Board::default();
     let mut visited_boards: Vec<u64> = Vec::new(); // List of board hashes
 
@@ -89,10 +91,10 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
                 main_board = board;
                 visited_boards = visited;
             },
-            SearchCommand::NewGame => transposition_table = TranspositionTable::default(),
+            SearchCommand::NewGame => transposition_table = NoTranspositionTable::default(),
             SearchCommand::Calculate(options) => {
 
-                let (search_result, depth, selective_depth): (MinimalSearchResult, _, _) = iterative_deepening_search(
+                let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
                     visited_boards.clone(),

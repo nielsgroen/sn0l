@@ -6,7 +6,7 @@ use crate::core::search::transpositions::TranspositionTable;
 pub fn order_captures(
     board: &Board,
     current_evaluation: BoardEvaluation,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
     // Order by `val captee` - `val capturer` (+ `val promotion`)
@@ -23,7 +23,7 @@ pub fn order_captures(
     for chess_move in move_generator {
         board.make_move(chess_move, &mut board_new);
 
-        if let Some(chess_move_info) = transposition_table.get(&board_new) {
+        if let Some(chess_move_info) = transposition_table.get_transposition(&board_new, None) {
             moves.push((chess_move, chess_move_info.evaluation));
         } else {
             // note: this ordering is not based on incremental static evaluation
@@ -70,7 +70,7 @@ pub fn order_captures(
 pub fn order_non_captures(
     board: &Board,
     current_evaluation: BoardEvaluation,
-    transposition_table: &mut TranspositionTable,
+    transposition_table: &mut impl TranspositionTable,
     move_generator: &mut MoveGen,
 ) -> Vec<(ChessMove, BoardEvaluation)> {
     let our_color = board.side_to_move();
@@ -85,7 +85,7 @@ pub fn order_non_captures(
     for chess_move in move_generator {
         board.make_move(chess_move, &mut board_new);
 
-        if let Some(chess_move_info) = transposition_table.get(&board_new) {
+        if let Some(chess_move_info) = transposition_table.get_transposition(&board_new, None) {
             moves.push((chess_move, chess_move_info.evaluation));
         } else {
             let source_square = chess_move.get_source();
