@@ -15,10 +15,10 @@ use crate::core::search::search_result::SearchResult;
 use crate::core::search::transpositions::hash_transposition::HashTranspositionTable;
 use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 
-mod search_result;
+pub mod search_result;
 pub mod transpositions;
 mod draw_detection;
-mod iterative_deepening;
+pub mod iterative_deepening;
 mod move_ordering;
 mod alpha_beta;
 

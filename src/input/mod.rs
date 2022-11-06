@@ -4,6 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 pub mod protocol_interpreter;
 pub mod uci_interpreter;
 pub mod stdin;
+pub mod command_line;
 
 #[derive(Debug)]
 pub struct ProtocolSupportError;
