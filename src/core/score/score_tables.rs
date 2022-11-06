@@ -171,6 +171,7 @@ pub const KING_TABLES: [[u64; 64]; 2] = [
     ]
 ];
 
+#[inline(always)]
 pub fn piece_table(color: Color, piece: Piece) -> [u64; 64] {
     match (color, piece) {
         (Color::White, Piece::Pawn) => PAWN_TABLES[0],
