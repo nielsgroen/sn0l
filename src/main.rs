@@ -90,14 +90,6 @@ fn start_uci_protocol() -> anyhow::Result<()> {
         }
     }
 
-    // // TODO remove temp
-    // search_tx.send(SearchCommand::from_command(
-    //     UciInterpreter::line_to_command("position startpos").unwrap()).unwrap()
-    // )?;
-    // search_tx.send(SearchCommand::from_command(
-    //     UciInterpreter::line_to_command("go 8").unwrap()).unwrap()
-    // )?;
-    // sleep(Duration::new(60, 0));
     return Ok(());
 }
 

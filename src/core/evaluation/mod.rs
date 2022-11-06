@@ -1,5 +1,5 @@
 use std::ops::BitAnd;
-use chess::{BitBoard, Board, BoardStatus, ChessMove, Color};
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, EMPTY};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
 pub mod incremental;
@@ -50,6 +50,20 @@ pub fn bubble_evaluation(evaluation: BoardEvaluation) -> BoardEvaluation {
         BoardEvaluation::WhiteMate(x) => BoardEvaluation::WhiteMate(x + 1),
         BoardEvaluation::BlackMate(x) => BoardEvaluation::BlackMate(x + 1),
         a => a,
+    }
+}
+
+#[inline]
+pub fn game_status(board: &Board, moves_left: bool) -> BoardStatus {
+    match moves_left {
+        true => {
+            if *board.checkers() == EMPTY {
+                BoardStatus::Stalemate
+            } else {
+                BoardStatus::Checkmate
+            }
+        },
+        _ => BoardStatus::Ongoing
     }
 }
 

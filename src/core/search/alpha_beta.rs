@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
-use crate::core::evaluation::{bubble_evaluation, single_evaluation};
+use crate::core::evaluation::{bubble_evaluation, game_status, single_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::draw_detection::detect_draw_incremental;
@@ -61,7 +61,9 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // dummy move, should always be overridden
     // unless the game is over
     let mut best_move = ChessMove::default();
-    let board_status = board.status();
+
+    let mut move_gen = MoveGen::new_legal(board);
+    let board_status = game_status(&board, move_gen.len() == 0);
 
     let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
@@ -116,7 +118,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         );
     }
 
-    let mut move_gen = MoveGen::new_legal(board);
     let all_moves = [
         order_captures(
             board,
@@ -290,7 +291,9 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
 ) -> T { // (_, eval, nodes)
     let mut nodes_searched = 1;
     let mut best_move = ChessMove::default();
-    let board_status = board.status();
+
+    let mut move_gen = MoveGen::new_legal(&board);
+    let board_status = game_status(&board, move_gen.len() == 0);
 
     let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
@@ -325,8 +328,6 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             None,
         );
     }
-
-    let mut move_gen = MoveGen::new_legal(&board);
 
     let moves = order_captures(
         &board,
