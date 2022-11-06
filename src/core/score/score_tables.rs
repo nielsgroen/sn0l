@@ -190,21 +190,7 @@ pub const fn piece_table(color: Color, piece: Piece) -> [u64; 64] {
 }
 
 pub const fn piece_value(color: Color, piece: Piece, index: usize) -> u64 {
-    // TODO: read from piece table
-    match (color, piece) {
-        (Color::White, Piece::Pawn) => 100,
-        (Color::Black, Piece::Pawn) => 100,
-        (Color::White, Piece::Knight) => 300,
-        (Color::Black, Piece::Knight) => 300,
-        (Color::White, Piece::Bishop) => 300,
-        (Color::Black, Piece::Bishop) => 300,
-        (Color::White, Piece::Rook) => 500,
-        (Color::Black, Piece::Rook) => 500,
-        (Color::White, Piece::Queen) => 900,
-        (Color::Black, Piece::Queen) => 900,
-        (Color::White, Piece::King) => 0,
-        (Color::Black, Piece::King) => 0,
-    }
+    piece_table(color, piece)[index]
 }
 
 

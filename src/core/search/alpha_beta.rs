@@ -62,13 +62,18 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // unless the game is over
     let mut best_move = ChessMove::default();
     let board_status = board.status();
-    // let current_evaluation = single_evaluation(board, board_status);
+
     let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
     if board_status == BoardStatus::Checkmate {
         return T::make_search_result(
             best_move,
-            current_evaluation,
+            {
+                match board.side_to_move() {
+                    Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
+                    Color::Black => BoardEvaluation::WhiteMate(0),
+                }
+            },
             None,
             None,
         );
@@ -77,16 +82,10 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     if board_status == BoardStatus::Stalemate {
         return T::make_search_result(
             best_move,
-            current_evaluation,
+            BoardEvaluation::PieceScore(Centipawns::new(0)),
             None,
             None,
         );
-    }
-
-    let current_score;
-    match current_evaluation {
-        BoardEvaluation::PieceScore(x) => current_score = x,
-        _ => panic!("Can't have non-centipawn simple evaluation"),
     }
 
     // Do draw detection before quiescence search
@@ -109,7 +108,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         return quiescence_alpha_beta(
             board,
             transposition_table,
-            // current_evaluation,
+            simple_evaluation,
             alpha,
             beta,
             current_depth + 1,
@@ -178,7 +177,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                     new_board,
                     transposition_table,
                     visited_boards.clone(),
-                    current_score + improvement,  // + because white
+                    simple_evaluation + improvement,  // + because white
                     alpha,
                     beta,
                     current_depth + 1,
@@ -241,7 +240,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                     new_board,
                     transposition_table,
                     visited_boards.clone(),
-                    current_score - improvement,  // - because black
+                    simple_evaluation - improvement,  // - because black
                     alpha,
                     beta,
                     current_depth + 1,
@@ -283,7 +282,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
-    // current_evaluation: BoardEvaluation,
+    simple_evaluation: Centipawns,
     mut alpha: BoardEvaluation,
     mut beta: BoardEvaluation,
     current_depth: u32,
@@ -292,7 +291,31 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     let mut nodes_searched = 1;
     let mut best_move = ChessMove::default();
     let board_status = board.status();
-    let current_evaluation = single_evaluation(board, board_status);
+
+    let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
+
+    if board_status == BoardStatus::Checkmate {
+        return T::make_search_result(
+            best_move,
+            {
+                match board.side_to_move() {
+                    Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
+                    Color::Black => BoardEvaluation::WhiteMate(0),
+                }
+            },
+            None,
+            None,
+        );
+    }
+
+    if board_status == BoardStatus::Stalemate {
+        return T::make_search_result(
+            best_move,
+            BoardEvaluation::PieceScore(Centipawns::new(0)),
+            None,
+            None,
+        );
+    }
 
     if current_depth >= max_selective_depth {
         return T::make_search_result(
@@ -330,9 +353,15 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
         // let mut search_result = T::default();
 
         for (chess_move, move_evaluation) in moves.iter() {
+            let improvement = incremental_evaluation(
+                &board,
+                &chess_move,
+                board.side_to_move(),
+            );
             let search_result: T = quiescence_alpha_beta(
                 &board.make_move_new(*chess_move),
                 transposition_table,
+                simple_evaluation + improvement, // + because white
                 alpha,
                 beta,
                 current_depth + 1,
@@ -378,6 +407,7 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             let search_result: T = quiescence_alpha_beta(
                 &null_board,
                 transposition_table,
+                simple_evaluation,
                 alpha,
                 beta,
                 current_depth + 1,
@@ -420,9 +450,15 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
         best_eval = BoardEvaluation::WhiteMate(0);
 
         for (chess_move, move_evaluation) in moves.iter() {
+            let improvement = incremental_evaluation(
+                &board,
+                &chess_move,
+                board.side_to_move(),
+            );
             let search_result: T = quiescence_alpha_beta(
                 &board.make_move_new(*chess_move),
                 transposition_table,
+                simple_evaluation - improvement,  // - because black
                 alpha,
                 beta,
                 current_depth + 1,
@@ -465,6 +501,7 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             let search_result: T = quiescence_alpha_beta(
                 &null_board,
                 transposition_table,
+                simple_evaluation,
                 alpha,
                 beta,
                 current_depth + 1,
