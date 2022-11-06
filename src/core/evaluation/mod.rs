@@ -25,7 +25,7 @@ pub fn single_evaluation(board: &Board) -> BoardEvaluation {
             let BitBoard(mut piece_positions) = board.pieces(piece).bitand(board.color_combined(color));
 
             'inner: for index in 0..64 {
-                let square_score = score_tables::piece_table(color, piece)[index] * (piece_positions & 1);
+                let square_score = score_tables::piece_value(color, piece, index) * (piece_positions & 1);
                 score += Centipawns::new(
                     match color {
                         Color::White => square_score as i64,
