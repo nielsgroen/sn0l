@@ -35,6 +35,8 @@ mod input;
 fn main() -> anyhow::Result<()> {
     let cli = input::command_line::Cli::parse();
 
+    print!("{:?}", cli);
+
     match cli.benchmark {
         true => run_benchmark(),
         false => start_uci_protocol(),
