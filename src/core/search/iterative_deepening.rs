@@ -21,7 +21,7 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
 
     match options {
         CalculateOptions::Depth(x) => max_search_depth = x,
-        CalculateOptions::Infinite => max_search_depth = 8, // todo
+        CalculateOptions::Infinite => max_search_depth = 5, // todo
         _ => panic!("unsupported iterative deepening calculate options"),
     }
 

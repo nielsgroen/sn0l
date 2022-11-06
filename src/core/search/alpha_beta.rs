@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, single_evaluation};
+use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::draw_detection::detect_draw_incremental;
 use crate::core::search::move_ordering::{order_captures, order_non_captures};
@@ -20,11 +21,19 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
 ) -> T {
     // The base evaluation used for move ordering, and static board scoring
     let selective_depth = selective_depth.unwrap_or(depth);
+    let simple_eval = single_evaluation(&board, board.status());
+
+    let simple_score;
+    match simple_eval {
+        BoardEvaluation::PieceScore(x) => simple_score = x,
+        _ => panic!("searching finished position"),
+    }
 
     let search_result = search_alpha_beta(
         board,
         transposition_table,
         visited_boards,
+        simple_score,
         // base_evaluation,
         BoardEvaluation::BlackMate(0),
         BoardEvaluation::WhiteMate(0),
@@ -40,7 +49,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
     mut visited_boards: Vec<u64>,
-    // current_evaluation: BoardEvaluation,
+    simple_evaluation: Centipawns,
     mut alpha: BoardEvaluation,
     mut beta: BoardEvaluation,
     current_depth: u32,
@@ -53,7 +62,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // unless the game is over
     let mut best_move = ChessMove::default();
     let board_status = board.status();
-    let current_evaluation = single_evaluation(board, board_status);
+    // let current_evaluation = single_evaluation(board, board_status);
+    let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
     if board_status == BoardStatus::Checkmate {
         return T::make_search_result(
@@ -71,6 +81,12 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
             None,
             None,
         );
+    }
+
+    let current_score;
+    match current_evaluation {
+        BoardEvaluation::PieceScore(x) => current_score = x,
+        _ => panic!("Can't have non-centipawn simple evaluation"),
     }
 
     // Do draw detection before quiescence search
@@ -128,6 +144,11 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         'outer: for moves in all_moves { // first capture moves, then non-capture moves
             for (chess_move, move_evaluation) in moves.iter() {
                 let new_board = &board.make_move_new(*chess_move);
+                let improvement = incremental_evaluation(
+                    &board,
+                    &chess_move,
+                    board.side_to_move(),
+                );
 
                 // if let Some(search_info) = get_transposition(
                 //     transposition_table,
@@ -157,7 +178,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                     new_board,
                     transposition_table,
                     visited_boards.clone(),
-                    // *move_evaluation,
+                    current_score + improvement,  // + because white
                     alpha,
                     beta,
                     current_depth + 1,
@@ -186,6 +207,11 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         'outer: for moves in all_moves {
             for (chess_move, move_evaluation) in moves.iter() {
                 let new_board = &board.make_move_new(*chess_move);
+                let improvement = incremental_evaluation(
+                    &board,
+                    &chess_move,
+                    board.side_to_move(),
+                );
 
                 // if let Some(search_info) = get_transposition(
                 //     transposition_table,
@@ -215,7 +241,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                     new_board,
                     transposition_table,
                     visited_boards.clone(),
-                    // *move_evaluation,
+                    current_score - improvement,  // - because black
                     alpha,
                     beta,
                     current_depth + 1,

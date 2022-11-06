@@ -43,26 +43,6 @@ fn main() -> anyhow::Result<()> {
     }
 
 
-    // loop {
-    //     let command = input_rx.recv().unwrap();
-    //
-    //     if let Some(search_command) = SearchCommand::from_command(command.clone()) {
-    //         search_tx.send(search_command).unwrap();
-    //     }
-    //
-    //     match command {
-    //         Command::IsReady => println!("readyok"),  // Main thread unblocked, so must be ready
-    //         Command::Quit => break,
-    //         // Command::SetPosition(board) => current_board = board,
-    //         // Command::Calculate(_) => {
-    //         //     // let mut candidate_moves = MoveGen::new_legal(&current_board);
-    //         //     // let chosen_move = candidate_moves.next().unwrap();
-    //         //     let chosen_move = core::evaluation_old::best_move_depth(&current_board, 3).unwrap();
-    //         //     println!("bestmove {}", chosen_move)
-    //         // }
-    //         _ => (),  // TODO
-    //     }
-    // }
 }
 
 fn start_uci_protocol() -> anyhow::Result<()> {
@@ -89,14 +69,35 @@ fn start_uci_protocol() -> anyhow::Result<()> {
     // let mut current_board = Board::default();  // TODO move this to the core engine
     println!("uciok"); // confirm pre-init
 
-    // TODO remove temp
-    search_tx.send(SearchCommand::from_command(
-        UciInterpreter::line_to_command("position startpos").unwrap()).unwrap()
-    )?;
-    search_tx.send(SearchCommand::from_command(
-        UciInterpreter::line_to_command("go 8").unwrap()).unwrap()
-    )?;
-    sleep(Duration::new(60, 0));
+    loop {
+        let command = input_rx.recv().unwrap();
+
+        if let Some(search_command) = SearchCommand::from_command(command.clone()) {
+            search_tx.send(search_command).unwrap();
+        }
+
+        match command {
+            Command::IsReady => println!("readyok"),  // Main thread unblocked, so must be ready
+            Command::Quit => break,
+            // Command::SetPosition(board) => current_board = board,
+            // Command::Calculate(_) => {
+            //     // let mut candidate_moves = MoveGen::new_legal(&current_board);
+            //     // let chosen_move = candidate_moves.next().unwrap();
+            //     let chosen_move = core::evaluation_old::best_move_depth(&current_board, 5).unwrap();
+            //     println!("bestmove {}", chosen_move)
+            // }
+            _ => (),  // TODO
+        }
+    }
+
+    // // TODO remove temp
+    // search_tx.send(SearchCommand::from_command(
+    //     UciInterpreter::line_to_command("position startpos").unwrap()).unwrap()
+    // )?;
+    // search_tx.send(SearchCommand::from_command(
+    //     UciInterpreter::line_to_command("go 8").unwrap()).unwrap()
+    // )?;
+    // sleep(Duration::new(60, 0));
     return Ok(());
 }
 

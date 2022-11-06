@@ -2,7 +2,7 @@ use std::ops::BitAnd;
 use chess::{BitBoard, Board, BoardStatus, ChessMove, Color};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
-mod incremental;
+pub mod incremental;
 
 
 

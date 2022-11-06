@@ -85,6 +85,7 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
 
     loop {
         let command = search_rx.recv().expect("search receiver error");
+        println!("{:?}", command);
 
         match command {
             SearchCommand::SetPosition(board, visited) => {
