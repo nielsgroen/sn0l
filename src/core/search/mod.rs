@@ -58,22 +58,6 @@ impl SearchCommand {
     }
 }
 
-// Should this be impl?
-// impl TryFrom<Command> for SearchCommand {
-//     type Error = ();
-//
-//     fn try_from(value: Command) -> Result<Self, Self::Error> {
-//         match value {
-//             Command::NewGame => Ok(SearchCommand::NewGame),
-//             Command::SetPosition(board) => Ok(SearchCommand::SetPosition(board)),
-//             Command::Calculate(options) => Ok(SearchCommand::Calculate(options)),
-//             Command::Stop => Ok(SearchCommand::Stop),
-//             _ => Err(()),
-//         }
-//     }
-// }
-
-
 
 /// The function to have a thread start functioning as the search engine.
 pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
