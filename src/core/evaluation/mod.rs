@@ -6,15 +6,15 @@ mod incremental;
 
 
 
-pub fn single_evaluation(board: &Board) -> BoardEvaluation {
-    if board.status() == BoardStatus::Checkmate {
+pub fn single_evaluation(board: &Board, board_status: BoardStatus) -> BoardEvaluation {
+    if board_status == BoardStatus::Checkmate {
         return match board.side_to_move() {
             Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
             Color::Black => BoardEvaluation::WhiteMate(0),
         }
     }
 
-    if board.status() == BoardStatus::Stalemate {
+    if board_status == BoardStatus::Stalemate {
         return BoardEvaluation::PieceScore(Centipawns::new(0));
     }
 

@@ -52,9 +52,10 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // dummy move, should always be overridden
     // unless the game is over
     let mut best_move = ChessMove::default();
-    let current_evaluation = single_evaluation(board);
+    let board_status = board.status();
+    let current_evaluation = single_evaluation(board, board_status);
 
-    if board.status() == BoardStatus::Checkmate {
+    if board_status == BoardStatus::Checkmate {
         return T::make_search_result(
             best_move,
             current_evaluation,
@@ -63,7 +64,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         );
     }
 
-    if board.status() == BoardStatus::Stalemate {
+    if board_status == BoardStatus::Stalemate {
         return T::make_search_result(
             best_move,
             current_evaluation,
@@ -264,7 +265,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
 ) -> T { // (_, eval, nodes)
     let mut nodes_searched = 1;
     let mut best_move = ChessMove::default();
-    let current_evaluation = single_evaluation(board);
+    let board_status = board.status();
+    let current_evaluation = single_evaluation(board, board_status);
 
     if current_depth >= max_selective_depth {
         return T::make_search_result(
