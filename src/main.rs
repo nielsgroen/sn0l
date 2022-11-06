@@ -99,16 +99,17 @@ fn start_uci_protocol() -> anyhow::Result<()> {
 }
 
 fn run_benchmark() -> anyhow::Result<()> {
-    use crate::core::search::iterative_deepening::iterative_deepening_search;
+    println!("Started benchmark");
 
     let (result, depth, selective_depth): (MinimalSearchResult, _, _) =
         iterative_deepening_search(
             &Board::default(),
             &mut NoTranspositionTable::default(),
             Vec::new(),
-            CalculateOptions::Depth(8),
+            CalculateOptions::Depth(5),
         );
 
+    println!("Done");
     Ok(())
 }
 
