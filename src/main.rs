@@ -4,16 +4,24 @@ use std::io::{BufRead, stdout};
 use std::str::FromStr;
 use std::thread;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread::sleep;
+use std::time::Duration;
 use anyhow;
 use chess::{Board, MoveGen};
+use clap::Parser;
 
 use input::uci_interpreter::UciInterpreter;
 use input::protocol_interpreter::ProtocolInterpreter;
 use input::stdin::listen_to_stdin;
 use input::protocol_interpreter::Command;
 use input::ProtocolSupportError;
+use crate::core::search::iterative_deepening::iterative_deepening_search;
+use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
 
 use crate::core::search::SearchCommand;
+use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
+use crate::input::command_line::Cli;
+use crate::input::protocol_interpreter::CalculateOptions;
 
 mod core;
 mod input;
@@ -25,7 +33,19 @@ mod input;
 // }
 
 fn main() -> anyhow::Result<()> {
+    let cli = input::command_line::Cli::parse();
 
+    print!("{:?}", cli);
+
+    match cli.benchmark {
+        true => run_benchmark(),
+        false => start_uci_protocol(),
+    }
+
+
+}
+
+fn start_uci_protocol() -> anyhow::Result<()> {
     // Make sure host (GUI) uses UCI protocol
     loop {
         let mut buffer = String::new();
@@ -63,14 +83,31 @@ fn main() -> anyhow::Result<()> {
             // Command::Calculate(_) => {
             //     // let mut candidate_moves = MoveGen::new_legal(&current_board);
             //     // let chosen_move = candidate_moves.next().unwrap();
-            //     let chosen_move = core::evaluation_old::best_move_depth(&current_board, 3).unwrap();
+            //     let chosen_move = core::evaluation_old::best_move_depth(&current_board, 5).unwrap();
             //     println!("bestmove {}", chosen_move)
             // }
             _ => (),  // TODO
         }
     }
+
+    return Ok(());
+}
+
+fn run_benchmark() -> anyhow::Result<()> {
+    println!("Started benchmark");
+
+    let (result, depth, selective_depth): (MinimalSearchResult, _, _) =
+        iterative_deepening_search(
+            &Board::default(),
+            &mut NoTranspositionTable::default(),
+            Vec::new(),
+            CalculateOptions::Depth(5),
+        );
+
+    println!("Done");
     Ok(())
 }
+
 
 fn pre_option_init(input_tx: Sender<Command>, search_rx: Receiver<SearchCommand>) {
     // The thread that listens to stdin

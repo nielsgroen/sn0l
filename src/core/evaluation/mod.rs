@@ -1,20 +1,20 @@
 use std::ops::BitAnd;
-use chess::{BitBoard, Board, BoardStatus, ChessMove, Color};
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, EMPTY};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
-mod incremental;
+pub mod incremental;
 
 
 
-pub fn single_evaluation(board: &Board) -> BoardEvaluation {
-    if board.status() == BoardStatus::Checkmate {
+pub fn single_evaluation(board: &Board, board_status: BoardStatus) -> BoardEvaluation {
+    if board_status == BoardStatus::Checkmate {
         return match board.side_to_move() {
             Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
             Color::Black => BoardEvaluation::WhiteMate(0),
         }
     }
 
-    if board.status() == BoardStatus::Stalemate {
+    if board_status == BoardStatus::Stalemate {
         return BoardEvaluation::PieceScore(Centipawns::new(0));
     }
 
@@ -25,7 +25,7 @@ pub fn single_evaluation(board: &Board) -> BoardEvaluation {
             let BitBoard(mut piece_positions) = board.pieces(piece).bitand(board.color_combined(color));
 
             'inner: for index in 0..64 {
-                let square_score = score_tables::piece_table(color, piece)[index] * (piece_positions & 1);
+                let square_score = score_tables::piece_value(color, piece, index) * (piece_positions & 1);
                 score += Centipawns::new(
                     match color {
                         Color::White => square_score as i64,
@@ -50,6 +50,20 @@ pub fn bubble_evaluation(evaluation: BoardEvaluation) -> BoardEvaluation {
         BoardEvaluation::WhiteMate(x) => BoardEvaluation::WhiteMate(x + 1),
         BoardEvaluation::BlackMate(x) => BoardEvaluation::BlackMate(x + 1),
         a => a,
+    }
+}
+
+#[inline]
+pub fn game_status(board: &Board, moves_left: bool) -> BoardStatus {
+    match moves_left {
+        true => {
+            if *board.checkers() == EMPTY {
+                BoardStatus::Stalemate
+            } else {
+                BoardStatus::Checkmate
+            }
+        },
+        _ => BoardStatus::Ongoing
     }
 }
 

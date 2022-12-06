@@ -1,6 +1,7 @@
 use chess::{Board, ChessMove, Color, EMPTY, MoveGen};
-use crate::core::score::{BoardEvaluation, Centipawns, piece_value};
-use crate::core::score::score_tables::piece_table;
+use crate::core::score::{BoardEvaluation, Centipawns};
+use crate::core::score;
+use crate::core::score::score_tables::{piece_table, piece_value};
 use crate::core::search::transpositions::TranspositionTable;
 
 pub fn order_captures(
@@ -34,8 +35,8 @@ pub fn order_captures(
             let promotion = chess_move.get_promotion();
 
             let mut chess_move_score = match promotion {
-                Some(promo) => piece_value(target_piece) - piece_value(source_piece) + piece_value(promo) + Centipawns::new(-1),
-                _ => piece_value(target_piece) - piece_value(source_piece),
+                Some(promo) => score::piece_value(target_piece) - score::piece_value(source_piece) + score::piece_value(promo) + Centipawns::new(-1),
+                _ => score::piece_value(target_piece) - score::piece_value(source_piece),
             };
 
             // Need to know the running score to properly compare with the positions that
@@ -90,14 +91,14 @@ pub fn order_non_captures(
         } else {
             let source_square = chess_move.get_source();
             let piece = board.piece_on(source_square).expect("move has no source piece");
-            let source_score = piece_table(our_color, piece)[source_square.to_index()];
+            let source_score = piece_value(our_color, piece, source_square.to_index());
 
             let target_square = chess_move.get_dest();
             let target_piece = match chess_move.get_promotion() {
                 Some(promo) => promo,
                 _ => piece,
             };
-            let target_score = piece_table(our_color, target_piece)[target_square.to_index()];
+            let target_score = piece_value(our_color, target_piece, target_square.to_index());
 
             // Need to know the running score to properly compare with the positions that
             // are already in the transposition table

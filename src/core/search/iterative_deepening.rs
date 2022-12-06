@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
 use chess::{Board, ChessMove, Color};
@@ -24,7 +25,8 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
         _ => panic!("unsupported iterative deepening calculate options"),
     }
 
-    let selective_depth: u32 = 8; // TODO
+    // let selective_depth: u32 = min(10, max_search_depth); // TODO
+    let selective_depth: u32 = 10;
     // TODO: Set this up
     // for max_depth in 1..max_search_depth {
     //

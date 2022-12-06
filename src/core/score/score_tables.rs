@@ -171,7 +171,8 @@ pub const KING_TABLES: [[u64; 64]; 2] = [
     ]
 ];
 
-pub fn piece_table(color: Color, piece: Piece) -> [u64; 64] {
+
+pub const fn piece_table(color: Color, piece: Piece) -> [u64; 64] {
     match (color, piece) {
         (Color::White, Piece::Pawn) => PAWN_TABLES[0],
         (Color::Black, Piece::Pawn) => PAWN_TABLES[1],
@@ -188,14 +189,11 @@ pub fn piece_table(color: Color, piece: Piece) -> [u64; 64] {
     }
 }
 
-pub fn color_pawn_table(color: chess::Color) -> [u64; 64] {
-    match color {
-        Color::White => PAWN_TABLES[0],
-        Color::Black => PAWN_TABLES[1],
-    }
+pub const fn piece_value(color: Color, piece: Piece, index: usize) -> u64 {
+    piece_table(color, piece)[index]
 }
 
 
-pub fn determine_piece_score(square: Square, color: chess::Color, piece: chess::Piece) -> Centipawns {
-    Centipawns::new(piece_table(color, piece)[square.to_index()] as i64)
+pub fn determine_piece_score(square: Square, color: Color, piece: Piece) -> Centipawns {
+    Centipawns::new(piece_value(color, piece, square.to_index()) as i64)
 }
