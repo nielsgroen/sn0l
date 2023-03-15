@@ -126,3 +126,4 @@ fn pre_option_init(input_tx: Sender<Command>, search_rx: Receiver<SearchCommand>
 
     // list options here, once there are some
 }
+
