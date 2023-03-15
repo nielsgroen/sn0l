@@ -69,7 +69,8 @@ pub fn game_status(board: &Board, moves_left: bool) -> BoardStatus {
 
 #[cfg(test)]
 mod tests {
-    use chess::Board;
+    use chess::{Board, MoveGen};
+    use crate::core::evaluation::game_status;
 
     use crate::core::score::{BoardEvaluation, Centipawns};
     use super::single_evaluation;
@@ -77,7 +78,9 @@ mod tests {
     #[test]
     fn check_equal_startpos() {
         let board = Board::default();
+        let move_gen = MoveGen::new_legal(&board);
+        let status = game_status(&board, move_gen.len() != 0);
 
-        assert_eq!(single_evaluation(&board), BoardEvaluation::PieceScore(Centipawns::new(0)));
+        assert_eq!(single_evaluation(&board, status), BoardEvaluation::PieceScore(Centipawns::new(0)));
     }
 }

@@ -147,7 +147,7 @@ fn check_debug_toggle() {
 fn check_position_fen_command() {
     let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let expected_board = Board::from_str(fen).unwrap();
-    let expected = Some(Command::SetPosition(expected_board));
+    let expected = Some(Command::SetPosition(expected_board, vec![]));
 
     let command_str = format!("{} {}", "position fen", fen);
 
@@ -156,7 +156,7 @@ fn check_position_fen_command() {
 
 #[test]
 fn check_position_start() {
-    let expected = Some(Command::SetPosition(Board::default()));
+    let expected = Some(Command::SetPosition(Board::default(), vec![]));
 
     let command_str = "position startpos";
     assert_eq!(UciInterpreter::line_to_command(&command_str), expected);
@@ -164,7 +164,10 @@ fn check_position_start() {
 
 #[test]
 fn check_position_start_with_moves() {
-    let expected = Some(Command::SetPosition(Board::from_str("rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1").unwrap()));
+    let board = Board::default();
+    let visited = vec![board.get_hash()];
+    let board = board.make_move_new(ChessMove::new(Square::D2, Square::D4, None));
+    let expected = Some(Command::SetPosition(board, visited));
     let command_str = "position startpos moves d2d4";
 
     assert_eq!(UciInterpreter::line_to_command(command_str), expected);

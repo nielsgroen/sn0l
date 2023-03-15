@@ -20,7 +20,7 @@ pub mod transpositions;
 mod draw_detection;
 pub mod iterative_deepening;
 mod move_ordering;
-mod alpha_beta;
+pub mod alpha_beta;
 
 
 /// The information about what search has been done on a particular node.

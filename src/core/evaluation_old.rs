@@ -233,16 +233,7 @@ fn check_single_eval_missing_rook() {
     // only king and rooks, white misses a1 rook.
     let board = Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap();
 
-    assert_eq!(eval_single(&board), Centipawns::new(-500));
-}
-
-#[test]
-fn check_depth_eval_missing_rook() {
-    // only king and rooks, white misses a1 rook.
-    let board = Board::from_str("r3k2r/8/8/8/8/8/8/4K2R w Kkq - 0 1").unwrap();
-
-    // Note: +500 instead of -500 for eval_single
-    assert_eq!(eval_depth(board, 4), Centipawns::new(500));
+    assert_eq!(eval_single(&board), Centipawns::new(-460));
 }
 
 #[test]

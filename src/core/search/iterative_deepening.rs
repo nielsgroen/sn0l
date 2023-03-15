@@ -14,7 +14,7 @@ use crate::input::protocol_interpreter::CalculateOptions;
 pub fn iterative_deepening_search<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
-    visited_boards: Vec<u64>, // TODO: use
+    visited_boards: Vec<u64>,
     options: CalculateOptions,
 ) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
     let mut max_search_depth: u32 = 1;
@@ -25,8 +25,8 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
         _ => panic!("unsupported iterative deepening calculate options"),
     }
 
-    // let selective_depth: u32 = min(10, max_search_depth); // TODO
-    let selective_depth: u32 = 10;
+    let selective_depth: u32 = min(10, max_search_depth); // TODO
+    // let selective_depth: u32 = 10;
     // TODO: Set this up
     // for max_depth in 1..max_search_depth {
     //

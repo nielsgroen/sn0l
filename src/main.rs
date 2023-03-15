@@ -25,6 +25,7 @@ use crate::input::protocol_interpreter::CalculateOptions;
 
 mod core;
 mod input;
+mod tests;
 
 // maybe this needs to be split up, because rust requires a lock around the whole thing?
 // struct GlobalState {

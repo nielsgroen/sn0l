@@ -9,9 +9,16 @@ edition = "2021"
 chess = "3.2.0"  # The (temporary?) legal move generator
 itertools = "0.10.3"
 anyhow = "1.0.58"
+thiserror = "1.0.38"
 nohash = "0.2.0"
 clap = { version = "4.0.19", features = ["derive"] }
 
 [profile.release]
 lto = true
 debug = 1
+
+[profile.test]
+opt-level = 3
+debug-assertions = false
+overflow-checks = false
+lto = true
