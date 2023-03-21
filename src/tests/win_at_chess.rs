@@ -12,13 +12,14 @@ use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 use crate::input::protocol_interpreter::CalculateOptions;
-use crate::tests::TestError;
+use crate::tests::{check_position, log_failed_positions, TestError};
 
-const DEPTH: u32 = 10;
+// const DEPTH: u32 = 10;
+const EPD_PATH: &str = "./src/tests/assets/win_at_chess.epd";
 
 #[test]
 fn check_positions() -> Result<()> {
-    let epd_path = PathBuf::from("./src/tests/assets/win_at_chess.epd");
+    let epd_path = PathBuf::from(EPD_PATH);
 
     println!("{:?}", epd_path);
     let records = epd::read_epd(epd_path.as_path()).expect("failed to read epd");
@@ -57,33 +58,12 @@ fn check_positions() -> Result<()> {
         // assert_eq!(search_result.best_move, record.best_move);
     }
 
-    let mut some_failed_position = false;
-    for failed_position in failed_positions.into_iter() {
-        some_failed_position = true;
-        let id = failed_position.0;
-        let expected = failed_position.1;
-        let actual = failed_position.2;
-        println!("Failed {id:?}, (expected {expected}, got {actual})");
-    }
+    let some_failed_position = failed_positions.len() > 0;
+    log_failed_positions(failed_positions);
 
     if some_failed_position {
         bail!("Failed some positions");
     }
     Ok(())
-}
-
-pub fn check_position<F>(record: &EPDRecord, search_method: F) -> Result<(), TestError>
-    where F: Fn(&Board) -> DebugSearchResult {
-
-    let board = Board::from_str(&record.fen).map_err(|_| EPDParseError::InvalidFEN).unwrap();
-    let found_result = search_method(&board);
-
-    match record.best_move == found_result.best_move {
-        true => Ok(()),
-        false => Err(TestError::WrongMove {
-            expected: record.best_move,
-            actual: found_result.best_move,
-        }),
-    }
 }
 

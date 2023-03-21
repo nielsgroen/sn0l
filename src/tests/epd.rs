@@ -97,10 +97,12 @@ impl EPDRecord {
         let board = Board::from_str(fen).map_err(|_| PuzzleParseError::InvalidFEN)?;
         let best_move = ChessMove::from_san(&board, moves.next().ok_or(PuzzleParseError::InvalidBestMove)?).map_err(|_| PuzzleParseError::InvalidBestMove)?;
 
+        let id = parts.next().map(|x| x.split(" ").skip(1).next()).flatten().map(|x| x.to_string());
+
         Ok(Self {
             fen: fen.to_string(),
             best_move,
-            id: None,
+            id,
         })
     }
 }
