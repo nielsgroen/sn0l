@@ -50,13 +50,16 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     transposition_table: &mut impl TranspositionTable,
     mut visited_boards: Vec<u64>,
     simple_evaluation: Centipawns,
-    mut alpha: BoardEvaluation,
-    mut beta: BoardEvaluation,
+    alpha: BoardEvaluation,
+    beta: BoardEvaluation,
     current_depth: u32,
     max_depth: u32,
     max_selective_depth: u32,
 ) -> T { // (_, eval, nodes)
     let mut nodes_searched = 1;
+
+    let mut alpha = alpha;
+    let mut beta = beta;
 
     // dummy move, should always be overridden
     // unless the game is over
@@ -72,8 +75,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
             best_move,
             {
                 match board.side_to_move() {
-                    Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
-                    Color::Black => BoardEvaluation::WhiteMate(0),
+                    Color::White => BoardEvaluation::BlackMate(1), // black has checkmated white
+                    Color::Black => BoardEvaluation::WhiteMate(1),
                 }
             },
             None,
@@ -195,7 +198,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 }
 
                 alpha = max(alpha, best_eval);
-                if beta < alpha {
+                if beta <= alpha {
                     break 'outer;
                 }
             }
@@ -284,11 +287,14 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
     simple_evaluation: Centipawns,
-    mut alpha: BoardEvaluation,
-    mut beta: BoardEvaluation,
+    alpha: BoardEvaluation,
+    beta: BoardEvaluation,
     current_depth: u32,
     max_selective_depth: u32,
 ) -> T { // (_, eval, nodes)
+    let mut alpha = alpha;
+    let mut beta = beta;
+
     let mut nodes_searched = 1;
     let mut best_move = ChessMove::default();
 
@@ -302,8 +308,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             best_move,
             {
                 match board.side_to_move() {
-                    Color::White => BoardEvaluation::BlackMate(0), // black has checkmated white
-                    Color::Black => BoardEvaluation::WhiteMate(0),
+                    Color::White => BoardEvaluation::BlackMate(1), // black has checkmated white
+                    Color::Black => BoardEvaluation::WhiteMate(1),
                 }
             },
             None,

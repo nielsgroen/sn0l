@@ -28,9 +28,16 @@ impl UciInterpreter {
                 for arg in args {
                     args_owned.push(arg.to_string());
                 }
-                Board::from_str(&args_owned.join(" ")).expect("invalid FEN code")
+                let mut board = Board::from_str(&args_owned.join(" ")).expect("invalid FEN code");
 
-                // TODO correctly parse FEN + moves
+                let args = args_owned.join(" ");
+                if let Some(moves) = args.split("moves ").skip(1).next() {
+                    for chess_move in moves.split(" ").into_iter() {
+                        board = board.make_move_new(ChessMove::from_str(chess_move).expect("non-chess move specified"));
+                    }
+                }
+
+                board
             },
             _ => panic!("unsupported position parameters")
         }

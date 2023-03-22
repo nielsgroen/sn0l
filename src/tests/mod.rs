@@ -22,6 +22,10 @@ pub enum TestError {
 pub fn check_position<F>(record: &EPDRecord, search_method: F) -> Result<(), TestError>
     where F: Fn(&Board) -> DebugSearchResult {
 
+    if let Some(record_id) = record.id.clone() {
+        println!("{record_id}");
+    }
+
     let board = Board::from_str(&record.fen).map_err(|_| EPDParseError::InvalidFEN).unwrap();
     let found_result = search_method(&board);
 
