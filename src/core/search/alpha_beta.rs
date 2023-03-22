@@ -198,7 +198,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 }
 
                 alpha = max(alpha, best_eval);
-                if beta <= alpha {
+                if beta < alpha {
                     break 'outer;
                 }
             }
