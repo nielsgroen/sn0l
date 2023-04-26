@@ -1,9 +1,6 @@
-use std::cmp::{max, min};
-use std::hash::Hash;
 use std::ops::BitAnd;
 use std::str::FromStr;
-use std::iter::ExactSizeIterator;
-use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, EMPTY, MoveGen, NUM_PIECES, Piece};
+use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, MoveGen};
 
 use super::score;
 use super::score::Centipawns;

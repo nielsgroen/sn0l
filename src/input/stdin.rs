@@ -1,8 +1,6 @@
 use std::io;
 use std::io::BufRead;
 use std::sync::mpsc::Sender;
-use std::thread::sleep;
-use std::time::Duration;
 
 use super::protocol_interpreter::Command;
 use super::uci_interpreter::UciInterpreter;

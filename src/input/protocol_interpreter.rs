@@ -1,5 +1,4 @@
-use std::num::NonZeroU32;
-use chess::{Board, ChessMove};
+use chess::{Board};
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum SupportedProtocols {

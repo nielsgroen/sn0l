@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::str::FromStr;
 use chess::{Board, ChessMove};
 use anyhow::Result;

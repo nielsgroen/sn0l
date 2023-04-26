@@ -1,11 +1,12 @@
 use chess::ChessMove;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::search_result::SearchResult;
+use crate::core::search::transpositions::EvalBound;
 
 #[derive(Clone, Debug)]
 pub struct DebugSearchResult {
     pub best_move: ChessMove,
-    pub board_evaluation: BoardEvaluation,
+    pub board_evaluation: EvalBound,
     pub nodes_searched: u32,
     pub critical_path: Vec<ChessMove>, // The line of play of best moves (in reverse order, first move is at the end)
 }
@@ -13,7 +14,7 @@ pub struct DebugSearchResult {
 impl DebugSearchResult {
     pub fn new(
         best_move: ChessMove,
-        board_evaluation: BoardEvaluation,
+        board_evaluation: EvalBound,
         nodes_searched: Option<u32>,
         critical_path: Option<Vec<ChessMove>>,
     ) -> Self {
@@ -27,7 +28,7 @@ impl DebugSearchResult {
 }
 
 impl SearchResult for DebugSearchResult {
-    fn make_search_result(best_move: ChessMove, board_evaluation: BoardEvaluation, nodes_searched: Option<u32>, critical_path: Option<Vec<ChessMove>>) -> Self {
+    fn make_search_result(best_move: ChessMove, board_evaluation: EvalBound, nodes_searched: Option<u32>, critical_path: Option<Vec<ChessMove>>) -> Self {
         Self::new(
             best_move,
             board_evaluation,
@@ -44,11 +45,11 @@ impl SearchResult for DebugSearchResult {
         self.best_move
     }
 
-    fn set_board_evaluation(&mut self, board_evaluation: BoardEvaluation) {
+    fn set_board_evaluation(&mut self, board_evaluation: EvalBound) {
         self.board_evaluation = board_evaluation;
     }
 
-    fn board_evaluation(&self) -> BoardEvaluation {
+    fn board_evaluation(&self) -> EvalBound {
         self.board_evaluation
     }
 
@@ -77,7 +78,7 @@ impl Default for DebugSearchResult {
     fn default() -> Self {
         Self {
             best_move: ChessMove::default(),
-            board_evaluation: BoardEvaluation::PieceScore(Centipawns::new(0)),
+            board_evaluation: EvalBound::Exact(BoardEvaluation::PieceScore(Centipawns::new(0))),
             nodes_searched: 0,
             critical_path: Vec::new(),
         }

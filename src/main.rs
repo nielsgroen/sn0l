@@ -1,26 +1,18 @@
-use std::collections::HashMap;
 use std::io;
-use std::io::{BufRead, stdout};
-use std::str::FromStr;
+use std::io::{BufRead};
 use std::thread;
 use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread::sleep;
-use std::time::Duration;
 use anyhow;
-use chess::{Board, MoveGen};
+use chess::{Board};
 use clap::Parser;
 
-use input::uci_interpreter::UciInterpreter;
-use input::protocol_interpreter::ProtocolInterpreter;
 use input::stdin::listen_to_stdin;
 use input::protocol_interpreter::Command;
-use input::ProtocolSupportError;
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
 
 use crate::core::search::SearchCommand;
 use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
-use crate::input::command_line::Cli;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 mod core;

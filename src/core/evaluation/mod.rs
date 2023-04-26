@@ -1,5 +1,5 @@
 use std::ops::BitAnd;
-use chess::{BitBoard, Board, BoardStatus, ChessMove, Color, EMPTY};
+use chess::{BitBoard, Board, BoardStatus, Color, EMPTY};
 use crate::core::score::{BoardEvaluation, Centipawns, score_tables};
 
 pub mod incremental;

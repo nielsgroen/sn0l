@@ -1,5 +1,5 @@
-use chess::{Board, BoardStatus, ChessMove, Color, Piece, Rank, Square};
-use crate::core::score::{BoardEvaluation, Centipawns};
+use chess::{Board, ChessMove, Color, Piece, Rank, Square};
+use crate::core::score::{Centipawns};
 use crate::core::score::score_tables::determine_piece_score;
 
 
@@ -12,8 +12,15 @@ pub fn incremental_evaluation(
     let mut result = Centipawns::new(0);
 
     let source_square = chess_move.get_source();
-    let source_piece = board.piece_on(source_square).expect("Move needs to have a piece on source square");
     let to_square = chess_move.get_dest();
+    // let source_piece = board.piece_on(source_square).expect(&format!("Move needs to have a piece on source square, source: {source_square:?}, to: {to_square:?}"));
+    let source_piece = board.piece_on(source_square);
+    if let None = source_piece {
+        println!("failed move {chess_move:?}, color: {our_color:?}");
+        println!("failed board: {board}")
+    }
+    let source_piece = source_piece.expect(&format!("Move needs to have a piece on source square, source: {source_square:?}, to: {to_square:?}"));
+
 
     result += incremental_move_diff(chess_move, source_piece, our_color);
 
@@ -22,7 +29,7 @@ pub fn incremental_evaluation(
         result += match (source_square, to_square) {
             (Square::E1, Square::G1) =>
                 incremental_move_diff(
-                    &ChessMove::new(Square::H1, Square::E1, None),
+                    &ChessMove::new(Square::H1, Square::F1, None),
                     Piece::Rook,
                     our_color,
                 ),

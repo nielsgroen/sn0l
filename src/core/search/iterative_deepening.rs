@@ -1,8 +1,5 @@
-use std::cmp::min;
-use std::num::NonZeroU32;
 use std::time::{Duration, Instant};
-use chess::{Board, ChessMove, Color};
-use super::search_result::debug_search_result::DebugSearchResult;
+use chess::{Board, Color};
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::alpha_beta::search_depth_pruned;
 use crate::core::search::search_result::SearchResult;
@@ -64,7 +61,7 @@ fn log_info_search_results<T: SearchResult>(
     depth: u32,
     selective_depth: u32
 ) {
-    let score_string = match (side_to_move, search_result.board_evaluation()) {
+    let score_string = match (side_to_move, search_result.board_evaluation().board_evaluation()) {
         (Color::White, BoardEvaluation::PieceScore(Centipawns(x))) => {
             format!("cp {}", x)
         },

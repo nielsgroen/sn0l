@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
-use std::num::NonZeroU32;
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use chess::{NUM_PIECES, Piece};
 use chess::BitBoard;

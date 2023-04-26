@@ -1,5 +1,5 @@
 use chess;
-use chess::{Board, Color, Piece, Square};
+use chess::{Color, Piece, Square};
 
 use crate::core::score::Centipawns;
 

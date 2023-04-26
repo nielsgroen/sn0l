@@ -1,17 +1,18 @@
 use chess::ChessMove;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::search_result::SearchResult;
+use crate::core::search::transpositions::EvalBound;
 
 #[derive(Copy, Clone, Debug)]
 pub struct MinimalSearchResult {
     best_move: ChessMove,
-    board_evaluation: BoardEvaluation,
+    board_evaluation: EvalBound,
 }
 
 impl MinimalSearchResult {
     pub fn new(
         chess_move: ChessMove,
-        board_evaluation: BoardEvaluation,
+        board_evaluation: EvalBound,
     ) -> Self {
         Self {
             best_move: chess_move,
@@ -21,7 +22,7 @@ impl MinimalSearchResult {
 }
 
 impl SearchResult for MinimalSearchResult {
-    fn make_search_result(best_move: ChessMove, board_evaluation: BoardEvaluation, nodes_searched: Option<u32>, critical_path: Option<Vec<ChessMove>>) -> Self {
+    fn make_search_result(best_move: ChessMove, board_evaluation: EvalBound, nodes_searched: Option<u32>, critical_path: Option<Vec<ChessMove>>) -> Self {
         Self {
             best_move,
             board_evaluation,
@@ -36,11 +37,11 @@ impl SearchResult for MinimalSearchResult {
         self.best_move
     }
 
-    fn set_board_evaluation(&mut self, board_evaluation: BoardEvaluation) {
+    fn set_board_evaluation(&mut self, board_evaluation: EvalBound) {
         self.board_evaluation = board_evaluation;
     }
 
-    fn board_evaluation(&self) -> BoardEvaluation {
+    fn board_evaluation(&self) -> EvalBound {
         self.board_evaluation
     }
 
@@ -69,7 +70,7 @@ impl Default for MinimalSearchResult {
     fn default() -> Self {
         MinimalSearchResult {
             best_move: ChessMove::default(),
-            board_evaluation: BoardEvaluation::PieceScore(Centipawns::new(0)),
+            board_evaluation: EvalBound::Exact(BoardEvaluation::PieceScore(Centipawns::new(0))),
         }
     }
 }

@@ -1,7 +1,5 @@
-use std::fmt::format;
-use std::str::{FromStr, SplitWhitespace};
-use itertools::Itertools;
-use chess::{Board, BoardBuilder, ChessMove, Square};
+use std::str::{FromStr};
+use chess::{Board, ChessMove, Square};
 
 use crate::input::protocol_interpreter::{CalculateOptions, DebugState};
 use super::protocol_interpreter::{Command, ProtocolInterpreter};

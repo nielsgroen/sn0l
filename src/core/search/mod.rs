@@ -1,19 +1,13 @@
-use std::collections::HashMap;
-use std::num::NonZeroU32;
 use std::sync::mpsc::Receiver;
-use std::time::{Duration, Instant};
-use chess::{Board, ChessMove, Color};
+use chess::{Board, ChessMove};
 use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
-use transpositions::TranspositionTable;
-use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
-use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
 use crate::core::search::search_result::SearchResult;
-use crate::core::search::transpositions::hash_transposition::HashTranspositionTable;
-use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
+use crate::core::search::transpositions::EvalBound;
+use crate::core::search::transpositions::high_depth_transposition::HighDepthTranspositionTable;
 
 pub mod search_result;
 pub mod transpositions;
@@ -26,7 +20,8 @@ pub mod alpha_beta;
 /// The information about what search has been done on a particular node.
 pub struct SearchInfo {
     pub depth_searched: SearchDepth,
-    pub evaluation: BoardEvaluation,
+    pub evaluation: EvalBound,
+    pub best_move: ChessMove,
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -63,7 +58,8 @@ impl SearchCommand {
 pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
 
     // init Transposition Table
-    let mut transposition_table = NoTranspositionTable::default();
+    // let mut transposition_table = NoTranspositionTable::default();
+    let mut transposition_table = HighDepthTranspositionTable::new(SearchDepth::Depth(2));
     let mut main_board: Board = Board::default();
     let mut visited_boards: Vec<u64> = Vec::new(); // List of board hashes
 
@@ -76,7 +72,8 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
                 main_board = board;
                 visited_boards = visited;
             },
-            SearchCommand::NewGame => transposition_table = NoTranspositionTable::default(),
+            // SearchCommand::NewGame => transposition_table = NoTranspositionTable::default(),
+            SearchCommand::NewGame => transposition_table = HighDepthTranspositionTable::new(SearchDepth::Depth(2)),
             SearchCommand::Calculate(options) => {
 
                 let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = iterative_deepening_search(

@@ -1,14 +1,13 @@
-use chess::Board;
-use crate::core::score::BoardEvaluation;
+use chess::{Board, ChessMove};
 use crate::core::search::{SearchDepth, SearchInfo};
-use crate::core::search::transpositions::TranspositionTable;
+use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
 /// A TranspositionTable implementation that is always empty
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoTranspositionTable;
 
 impl TranspositionTable for NoTranspositionTable {
-    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: BoardEvaluation) {
+    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove) {
         ()
     }
 

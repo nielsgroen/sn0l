@@ -1,16 +1,32 @@
 use std::cmp::max;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use chess::{Board, ChessMove};
-use nohash::BuildNoHashHasher;
 use crate::core::search::{SearchDepth, SearchInfo};
+use crate::core::search::transpositions::hash_transposition::HashTranspositionTable;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
-pub type HashTranspositionTable = HashMap<Board, SearchInfo, BuildNoHashHasher<u64>>;
+pub struct HighDepthTranspositionTable {
+    pub minimal_depth: SearchDepth,
+    transposition_table: HashTranspositionTable,
+}
 
-impl TranspositionTable for HashTranspositionTable {
+impl HighDepthTranspositionTable {
+    pub fn new(minimal_depth: SearchDepth) -> Self {
+        HighDepthTranspositionTable {
+            minimal_depth,
+            transposition_table: HashTranspositionTable::default(),
+        }
+    }
+}
+
+impl TranspositionTable for HighDepthTranspositionTable {
     fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove) {
-        let current_entry = self.entry(board.clone());
+        // Only keep entries of sufficient depth
+        if search_depth < self.minimal_depth {
+            return;
+        }
+
+        let current_entry = self.transposition_table.entry(board.clone());
 
         match current_entry {
             Entry::Vacant(mut o) => {
@@ -35,7 +51,7 @@ impl TranspositionTable for HashTranspositionTable {
     }
 
     fn get_transposition(&mut self, board: &Board, minimal_search_depth: Option<SearchDepth>) -> Option<&SearchInfo> {
-        let search_info = self.get(board)?;
+        let search_info = self.transposition_table.get(board)?;
 
         if search_info.depth_searched >= minimal_search_depth.unwrap_or(SearchDepth::Single) {
             return Some(search_info);
