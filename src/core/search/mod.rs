@@ -8,6 +8,7 @@ use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::transpositions::EvalBound;
 use crate::core::search::transpositions::high_depth_transposition::HighDepthTranspositionTable;
+use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 
 pub mod search_result;
 pub mod transpositions;
