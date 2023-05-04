@@ -8,6 +8,39 @@ use crate::core::search::transpositions::TranspositionTable;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 
+/// Determines whether the next depth should be searched
+pub fn is_still_searching(
+    calculate_options: CalculateOptions,
+    board: &Board,
+    search_start: Instant,
+    depth_to_search: u32,
+) -> bool {
+    match calculate_options {
+        CalculateOptions::Depth(x) => depth_to_search <= x,
+        CalculateOptions::Infinite => true,
+        CalculateOptions::Game {
+            white_time,
+            white_increment,
+            black_time,
+            black_increment,
+        } => {
+            match board.side_to_move() {
+                Color::White => {
+                    (search_start.elapsed().as_millis() as u64).saturating_sub(white_increment) < white_time / 100
+                },
+                Color::Black => {
+                    (search_start.elapsed().as_millis() as u64).saturating_sub(black_increment) < black_time / 100
+                },
+            }
+        },
+        CalculateOptions::MoveTime(x) => {
+            // TODO: engine actually should abort as soon as the ms passed
+            // This will go to the next depth as long as MoveTime x hasn't passed yet.
+            (search_start.elapsed().as_millis() as u64) < x
+        },
+    }
+}
+
 pub fn iterative_deepening_search<T: SearchResult + Default>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
@@ -16,12 +49,6 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
 ) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
     let mut max_search_depth: u32 = 1;
 
-    match options {
-        CalculateOptions::Depth(x) => max_search_depth = x,
-        CalculateOptions::Infinite => max_search_depth = 5, // todo
-        _ => panic!("unsupported iterative deepening calculate options"),
-    }
-
     // let selective_depth: u32 = min(10, max_search_depth); // TODO
     let selective_depth: u32 = 10;
     // TODO: Set this up
@@ -29,23 +56,33 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
     //
 
     // }
-
     let now = Instant::now();
-    let search_result: T = search_depth_pruned(
+    let mut current_depth = 2;
+    let mut search_result: T = search_depth_pruned(
         board,
         transposition_table,
-        visited_boards,
-        max_search_depth,
-        Some(selective_depth), // todo
+        visited_boards.clone(),
+        1,
+        None,
     );
-    let duration = now.elapsed();
-    log_info_search_results(
-        &search_result,
-        board.side_to_move(),
-        duration,
-        max_search_depth, // TODO: change to actual depth when iteratively deepening
-        selective_depth,
-    );
+    while is_still_searching(options, board, now, current_depth) {
+        search_result = search_depth_pruned(
+            board,
+            transposition_table,
+            visited_boards.clone(),
+            current_depth,
+            None,
+        );
+        let duration = now.elapsed();
+        log_info_search_results(
+            &search_result,
+            board.side_to_move(),
+            duration,
+            current_depth,
+            current_depth, // TODO: Change to actual selective depth
+        );
+        current_depth += 1;
+    }
 
     (
         search_result,

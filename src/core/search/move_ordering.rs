@@ -9,24 +9,30 @@ use crate::core::search::transpositions::TranspositionTable;
 pub fn order_moves(
     board: &Board,
     current_evaluation: BoardEvaluation,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    already_found_move: Option<ChessMove>,
     mut move_generator: &mut MoveGen,
     captures_only: bool,
 ) -> Vec<ChessMove> {
     // First: Check if a best move exists
 
-    let search_info = transposition_table.get_transposition(board, None);
+    // let search_info = transposition_table.get_transposition(board, None);
 
-    let best_move;
-    if let Some(s) = search_info {
-        if !is_default_move(&s.best_move) { // In the case an ended game (e.g. checkmate) ends up in the Transposition Table)
-            best_move = Some(s.best_move);
-        } else {
-            best_move = None;
+    let mut best_move = None;
+    if let Some(m) = already_found_move {
+        if !is_default_move(&m) { // In the case an ended game (e.g. checkmate) ends up in the Transposition Table
+            best_move = already_found_move;
         }
-    } else {
-        best_move = None;
     }
+    // if let Some(s) = search_info {
+    //     if !is_default_move(&s.best_move) { // In the case an ended game (e.g. checkmate) ends up in the Transposition Table)
+    //         best_move = Some(s.best_move);
+    //     } else {
+    //         best_move = None;
+    //     }
+    // } else {
+    //     best_move = None;
+    // }
 
     let our_color = board.side_to_move();
     let mut capture_moves: Vec<(ChessMove, Centipawns)> = match best_move {

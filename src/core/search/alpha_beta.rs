@@ -108,10 +108,12 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     }
 
     // Check if already in transposition table
+    let mut already_found_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
         Some(SearchDepth::Depth(max_depth - current_depth)),
     ) {
+        already_found_move = Some(solution.best_move);
         // match (solution.evaluation, board.side_to_move()) {
         //
         // }
@@ -152,7 +154,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     let all_moves = order_moves(
         board,
         current_evaluation,
-        transposition_table,
+        // transposition_table,
+        already_found_move,
         &mut move_gen,
         false,
     );
@@ -393,10 +396,12 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     //     transposition_table,
     //     &mut move_gen,
     // );
+    let already_found_move = None; // TODO: get from TT
     let moves = order_moves(
         &board,
         current_evaluation,
-        transposition_table,
+        // transposition_table,
+        already_found_move,
         &mut move_gen,
         true,
     );

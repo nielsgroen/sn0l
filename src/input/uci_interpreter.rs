@@ -1,7 +1,11 @@
 use std::str::{FromStr};
 use chess::{Board, ChessMove, Square};
+use itertools::Itertools;
+use lazy_static::lazy_static;
+use regex::Regex;
 
 use crate::input::protocol_interpreter::{CalculateOptions, DebugState};
+use crate::input::protocol_interpreter::CalculateOptions::Game;
 use super::protocol_interpreter::{Command, ProtocolInterpreter};
 
 // Interpreter for the Universal Chess Interface protocol
@@ -58,6 +62,7 @@ impl UciInterpreter {
     }
 
     fn determine_calculate_options<'a>(mut args: impl Iterator<Item=&'a str>) -> CalculateOptions {
+
         match args.next() {
             Some("infinite") => CalculateOptions::Infinite,
             Some("movetime") => CalculateOptions::MoveTime(
@@ -67,7 +72,39 @@ impl UciInterpreter {
                     .parse::<u64>()
                     .expect("movetime must be a positive integer")
             ),
-            Some(other) => CalculateOptions::Infinite,  // TODO
+            Some("wtime") => {
+                lazy_static! {
+                    static ref TIME_REGEX: Regex = Regex::new(r"(?P<wtime>\d+) btime (?P<btime>\d+) winc (?P<winc>\d+) binc (?P<binc>\d+)").unwrap();
+                }
+
+                let args_joined = args.join(" ");
+                let capture = TIME_REGEX.captures(&args_joined).expect("invalid calculation times set");
+
+                let wtime = capture.name("wtime").unwrap();
+                let btime = capture.name("btime").unwrap();
+                let winc = capture.name("winc").unwrap();
+                let binc = capture.name("binc").unwrap();
+
+                let wtime = wtime.as_str().parse::<u64>().expect("wtime must be a positive integer");
+                let btime = btime.as_str().parse::<u64>().expect("btime must be a positive integer");
+                let winc = winc.as_str().parse::<u64>().expect("winc must be a positive integer");
+                let binc = binc.as_str().parse::<u64>().expect("binc must be a positive integer");
+
+                Game {
+                    white_time: wtime,
+                    black_time: btime,
+                    white_increment: winc,
+                    black_increment: binc,
+                }
+            }
+            Some("depth") => {
+                args
+                    .next()
+                    .expect("no depth value specified")
+                    .parse::<u64>()
+                    .expect("depth must be a positive integer")
+            },
+            Some(_other) => CalculateOptions::Infinite,  // TODO
             // Some(_) => panic!("unsupported calculate option"),
             None => CalculateOptions::Infinite,
         }
