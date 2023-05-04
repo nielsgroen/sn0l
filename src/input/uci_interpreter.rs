@@ -98,11 +98,13 @@ impl UciInterpreter {
                 }
             }
             Some("depth") => {
-                args
-                    .next()
-                    .expect("no depth value specified")
-                    .parse::<u64>()
-                    .expect("depth must be a positive integer")
+                CalculateOptions::Depth(
+                    args
+                        .next()
+                        .expect("no depth value specified")
+                        .parse::<u64>()
+                        .expect("depth must be a positive integer") as u32
+                )
             },
             Some(_other) => CalculateOptions::Infinite,  // TODO
             // Some(_) => panic!("unsupported calculate option"),

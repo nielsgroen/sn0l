@@ -52,23 +52,23 @@ impl EvalBound {
 impl PartialOrd for EvalBound {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
-            (EvalBound::UpperBound(_), EvalBound::UpperBound(_)) => None,
+            (EvalBound::UpperBound(x), EvalBound::UpperBound(y)) => Some(x.cmp(y)),
             (EvalBound::UpperBound(x), EvalBound::Exact(y)) => {
-                if x < y {
+                if x <= y {
                     Some(Ordering::Less)
                 } else {
                     None
                 }
             },
             (EvalBound::UpperBound(x), EvalBound::LowerBound(y)) => {
-                if x < y {
+                if x <= y {
                     Some(Ordering::Less)
                 } else {
                     None
                 }
             },
             (EvalBound::Exact(x), EvalBound::UpperBound(y)) => {
-                if x > y {
+                if x >= y {
                     Some(Ordering::Greater)
                 } else {
                     None
@@ -78,22 +78,22 @@ impl PartialOrd for EvalBound {
                 Some(x.cmp(y))
             },
             (EvalBound::Exact(x), EvalBound::LowerBound(y)) => {
-                if x < y {
+                if x <= y {
                     Some(Ordering::Less)
                 } else {
                     None
                 }
             },
-            (EvalBound::LowerBound(_), EvalBound::LowerBound(_)) => None,
+            (EvalBound::LowerBound(x), EvalBound::LowerBound(y)) => Some(x.cmp(y)),
             (EvalBound::LowerBound(x), EvalBound::Exact(y)) => {
-                if x > y {
+                if x >= y {
                     Some(Ordering::Greater)
                 } else {
                     None
                 }
             },
             (EvalBound::LowerBound(x), EvalBound::UpperBound(y)) => {
-                if x > y {
+                if x >= y {
                     Some(Ordering::Greater)
                 } else {
                     None

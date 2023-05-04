@@ -56,14 +56,14 @@ pub fn bubble_evaluation(evaluation: BoardEvaluation) -> BoardEvaluation {
 #[inline]
 pub fn game_status(board: &Board, moves_left: bool) -> BoardStatus {
     match moves_left {
-        true => {
+        true => BoardStatus::Ongoing,
+        false => {
             if *board.checkers() == EMPTY {
                 BoardStatus::Stalemate
             } else {
                 BoardStatus::Checkmate
             }
         },
-        _ => BoardStatus::Ongoing
     }
 }
 

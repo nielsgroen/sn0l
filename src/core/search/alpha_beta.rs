@@ -2,6 +2,7 @@ use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, game_status, single_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
+use crate::core::search::common::check_game_over;
 use crate::core::search::draw_detection::detect_draw_incremental;
 use crate::core::search::move_ordering::order_moves;
 use crate::core::search::search_result::SearchResult;
@@ -65,46 +66,17 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     let mut best_move = ChessMove::default();
 
     let mut move_gen = MoveGen::new_legal(board);
-    let board_status = game_status(&board, move_gen.len() == 0);
+    let board_status = game_status(&board, move_gen.len() != 0);
 
     let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
-
-    if board_status == BoardStatus::Checkmate {
-        return T::make_search_result(
-            best_move,
-            {
-                match board.side_to_move() {
-                    Color::White => EvalBound::Exact(BoardEvaluation::BlackMate(1)), // black has checkmated white
-                    Color::Black => EvalBound::Exact(BoardEvaluation::WhiteMate(1)),
-                }
-            },
-            None,
-            None,
-        );
-    }
-
-    if board_status == BoardStatus::Stalemate {
-        return T::make_search_result(
-            best_move,
-            EvalBound::Exact(BoardEvaluation::PieceScore(Centipawns::new(0))),
-            None,
-            None,
-        );
-    }
 
     // Do draw detection before quiescence search
     // => No draw detection necessary when only capturing
     // But still need draw detection on last move before quiescence search
     visited_boards.push(board.get_hash());
     let visited_boards = visited_boards;
-
-    if detect_draw_incremental(&visited_boards) {
-        return T::make_search_result(
-            best_move,
-            EvalBound::Exact(BoardEvaluation::PieceScore(Centipawns::new(0))),
-            None,
-            None,
-        );
+    if let Some(search_result) = check_game_over(board, board_status, &visited_boards) {
+        return search_result;
     }
 
     // Check if already in transposition table
@@ -153,7 +125,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 
     let all_moves = order_moves(
         board,
-        current_evaluation,
         // transposition_table,
         already_found_move,
         &mut move_gen,
@@ -329,7 +300,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     best_search_result.prepend_move(best_move);
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
-    best_search_result.set_board_evaluation(best_eval);
+    best_search_result.set_board_evaluation(eval_bound);
     best_search_result
 }
 
@@ -350,7 +321,7 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     let mut best_move = ChessMove::default();
 
     let mut move_gen = MoveGen::new_legal(&board);
-    let board_status = game_status(&board, move_gen.len() == 0);
+    let board_status = game_status(&board, move_gen.len() != 0);
 
     let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
@@ -399,7 +370,6 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     let already_found_move = None; // TODO: get from TT
     let moves = order_moves(
         &board,
-        current_evaluation,
         // transposition_table,
         already_found_move,
         &mut move_gen,
@@ -639,3 +609,6 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     best_search_result.set_board_evaluation(eval_bound);
     best_search_result
 }
+
+
+

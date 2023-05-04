@@ -8,7 +8,6 @@ use crate::core::search::transpositions::TranspositionTable;
 
 pub fn order_moves(
     board: &Board,
-    current_evaluation: BoardEvaluation,
     // transposition_table: &mut impl TranspositionTable,
     already_found_move: Option<ChessMove>,
     mut move_generator: &mut MoveGen,

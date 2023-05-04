@@ -16,6 +16,8 @@ mod draw_detection;
 pub mod iterative_deepening;
 mod move_ordering;
 pub mod alpha_beta;
+pub mod mt;
+pub mod common;
 
 
 /// The information about what search has been done on a particular node.
