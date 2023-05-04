@@ -103,19 +103,19 @@ fn log_info_search_results<T: SearchResult>(
             format!("cp {}", x)
         },
         (Color::White, BoardEvaluation::WhiteMate(x)) => {
-            format!("mate {}", x)
+            format!("mate {}", x / 2)
         },
         (Color::White, BoardEvaluation::BlackMate(x)) => {
-            format!("mate -{}", x)
+            format!("mate -{}", x / 2)
         },
         (Color::Black, BoardEvaluation::PieceScore(Centipawns(x))) => {
             format!("cp {}", -x)
         },
         (Color::Black, BoardEvaluation::WhiteMate(x)) => {
-            format!("mate -{}", x)
+            format!("mate -{}", x / 2)
         },
         (Color::Black, BoardEvaluation::BlackMate(x)) => {
-            format!("mate {}", x)
+            format!("mate {}", x / 2)
         },
     };
 

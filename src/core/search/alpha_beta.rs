@@ -34,7 +34,6 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
         transposition_table,
         visited_boards,
         simple_score,
-        // base_evaluation,
         EvalBound::Exact(BoardEvaluation::BlackMate(0)),
         EvalBound::Exact(BoardEvaluation::WhiteMate(0)),
         0,
@@ -68,7 +67,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     let mut move_gen = MoveGen::new_legal(board);
     let board_status = game_status(&board, move_gen.len() != 0);
 
-    let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
+    // let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
     // Do draw detection before quiescence search
     // => No draw detection necessary when only capturing
@@ -166,38 +165,17 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         &mut move_gen,
         false,
     );
-    // let all_moves = [
-    //     order_captures(
-    //         board,
-    //         current_evaluation,
-    //         transposition_table,
-    //         &mut move_gen,
-    //     ),
-    //     order_non_captures(
-    //         board,
-    //         current_evaluation,
-    //         transposition_table,
-    //         &mut move_gen,
-    //     ),
-    // ];
 
     let mut best_eval;
-    // let mut best_path: Option<Vec<ChessMove>> = None;
-    // let mut search_result = T::default();
     let mut best_search_result = T::default();
 
     if all_moves.len() == 0 {
         panic!("WARNING continuing with empty all_moves");
     }
-    let mut moves_looked_at = 0;
     if board.side_to_move() == Color::White {
         best_eval = EvalBound::UpperBound(BoardEvaluation::BlackMate(0));
 
         for chess_move in all_moves.into_iter() {
-            //TODO: remove
-            moves_looked_at += 1;
-        // 'outer: for moves in all_moves { // first capture moves, then non-capture moves
-        //     for (chess_move, move_evaluation) in moves.iter() {
             let new_board = &board.make_move_new(chess_move);
             let improvement = incremental_evaluation(
                 &board,
@@ -205,30 +183,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 board.side_to_move(),
             );
 
-            // if let Some(search_info) = get_transposition(
-            //     transposition_table,
-            //     &new_board,
-            //     SearchDepth::Depth(max_depth - current_depth - 1),
-            // ) {
-            //     search_result = SearchResult::new(
-            //         ChessMove::default(),
-            //         search_info.evaluation,
-            //         None,
-            //         None,
-            //     );
-            // } else {
-            //     search_result = search_alpha_beta(
-            //         new_board,
-            //         transposition_table,
-            //         visited_boards.clone(),
-            //         // *move_evaluation,
-            //         alpha,
-            //         beta,
-            //         current_depth + 1,
-            //         max_depth,
-            //         max_selective_depth,
-            //     );
-            // }
             let search_result: T = search_alpha_beta(
                 new_board,
                 transposition_table,
@@ -241,21 +195,12 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 max_selective_depth,
             );
 
-            // TODO: what to do when all fail low (all have upperbound below alpha)?
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
-            if search_result.board_evaluation() >= best_eval { // TODO: what to do when combining Upperbound w/ Exact
+            if search_result.board_evaluation() >= best_eval {
                 best_eval = search_result.board_evaluation();
                 best_move = chess_move;
-                // best_path = search_result.critical_path();
                 best_search_result = search_result;
-            } else { // TODO: Remove this else
-                if best_eval == EvalBound::UpperBound(BoardEvaluation::BlackMate(0)) {
-                    println!("Compare failed");
-                    println!("best eval {best_eval:?}");
-                    println!("new eval {:?}", search_result.board_evaluation());
-                }
             }
-
 
             // alpha = max(alpha, best_eval);
             if best_eval > alpha {
@@ -269,10 +214,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         best_eval = EvalBound::LowerBound(BoardEvaluation::WhiteMate(0));
 
         for chess_move in all_moves.into_iter() {
-            //TODO: remove
-            moves_looked_at += 1;
-        // 'outer: for moves in all_moves {
-        //     for (chess_move, move_evaluation) in moves.iter() {
             let new_board = &board.make_move_new(chess_move);
             let improvement = incremental_evaluation(
                 &board,
@@ -280,30 +221,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 board.side_to_move(),
             );
 
-            // if let Some(search_info) = get_transposition(
-            //     transposition_table,
-            //     &new_board,
-            //     SearchDepth::Depth(max_depth - current_depth - 1),
-            // ) {
-            //     search_result = SearchResult::new(
-            //         ChessMove::default(),
-            //         search_info.evaluation,
-            //         None,
-            //         None,
-            //     );
-            // } else {
-            //     search_result = search_alpha_beta(
-            //         new_board,
-            //         transposition_table,
-            //         visited_boards.clone(),
-            //         // *move_evaluation,
-            //         alpha,
-            //         beta,
-            //         current_depth + 1,
-            //         max_depth,
-            //         max_selective_depth,
-            //     );
-            // }
             let search_result: T = search_alpha_beta(
                 new_board,
                 transposition_table,
@@ -321,7 +238,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
             if search_result.board_evaluation() <= best_eval {
                 best_eval = search_result.board_evaluation();
                 best_move = chess_move;
-                // best_path = search_result.critical_path();
                 best_search_result = search_result;
             }
 
@@ -333,14 +249,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 break;
             }
         }
-    }
-
-    if best_eval == EvalBound::Exact(BoardEvaluation::WhiteMate(0)) || best_eval == EvalBound::Exact(BoardEvaluation::BlackMate(0)) {
-        println!("mate found");
-        println!("{board}");
-        println!("depth {current_depth}");
-        println!("nodes searched {nodes_searched}");
-        println!("moves looked at {moves_looked_at}");
     }
 
     best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
