@@ -130,7 +130,7 @@ fn log_info_search_results<T: SearchResult>(
             .clone()
             .unwrap()
             .into_iter()
-            // .rev()
+            .rev()
             .map(|x| x.to_string())
             .collect::<Vec<_>>()
             .join(" ");

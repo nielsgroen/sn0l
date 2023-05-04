@@ -70,7 +70,8 @@ impl SearchResult for DebugSearchResult {
     }
 
     fn critical_path(&self) -> Option<Vec<ChessMove>> {
-        Some(self.critical_path.clone().into_iter().rev().collect())
+        Some(self.critical_path.clone())
+        // Some(self.critical_path.clone().into_iter().rev().collect())
     }
 }
 
