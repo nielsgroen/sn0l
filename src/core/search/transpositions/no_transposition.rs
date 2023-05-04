@@ -7,7 +7,7 @@ use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 pub struct NoTranspositionTable;
 
 impl TranspositionTable for NoTranspositionTable {
-    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove) {
+    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove, prime_variation: Option<Vec<ChessMove>>) {
         ()
     }
 

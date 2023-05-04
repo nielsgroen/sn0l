@@ -14,6 +14,7 @@ pub trait TranspositionTable {
         search_depth: SearchDepth,
         evaluation: EvalBound,
         best_move: ChessMove,
+        prime_variation: Option<Vec<ChessMove>>,
     );
 
     fn get_transposition(

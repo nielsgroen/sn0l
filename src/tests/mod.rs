@@ -8,6 +8,7 @@ use crate::tests::epd::{EPDParseError, EPDRecord};
 pub mod win_at_chess;
 pub mod low_ply_tests;
 pub mod epd;
+pub mod eval_bound;
 
 
 #[derive(Error, Debug, Copy, Clone)]

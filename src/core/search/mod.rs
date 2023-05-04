@@ -21,10 +21,12 @@ pub mod common;
 
 
 /// The information about what search has been done on a particular node.
+#[derive(Clone, Debug)]
 pub struct SearchInfo {
     pub depth_searched: SearchDepth,
     pub evaluation: EvalBound,
     pub best_move: ChessMove,
+    pub prime_variation: Option<Vec<ChessMove>>,
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -87,7 +89,6 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
                 );
 
                 println!("bestmove {}", search_result.best_move());
-
             },
             SearchCommand::Stop => (),
         }

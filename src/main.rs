@@ -28,7 +28,7 @@ mod tests;
 fn main() -> anyhow::Result<()> {
     let cli = input::command_line::Cli::parse();
 
-    print!("{:?}", cli);
+    println!("{:?}", cli);
 
     match cli.benchmark {
         true => run_benchmark(),
@@ -40,13 +40,15 @@ fn main() -> anyhow::Result<()> {
 
 fn start_uci_protocol() -> anyhow::Result<()> {
     // Make sure host (GUI) uses UCI protocol
+    println!("started!");
     loop {
         let mut buffer = String::new();
         io::stdin().lock().read_line(&mut buffer).expect("Failed stdin read");
 
-        if buffer == "uci\n" {
+        println!("{buffer}");
+        if buffer == "uci\n" || buffer == "uci" {
             break;
-        } else if buffer == "quit\n" {
+        } else if buffer == "quit\n" || buffer == "quit" {
             return Ok(());
         }
 

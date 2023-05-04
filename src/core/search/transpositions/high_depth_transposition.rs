@@ -5,6 +5,7 @@ use crate::core::search::{SearchDepth, SearchInfo};
 use crate::core::search::transpositions::hash_transposition::HashTranspositionTable;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
+#[derive(Clone, Debug)]
 pub struct HighDepthTranspositionTable {
     pub minimal_depth: SearchDepth,
     transposition_table: HashTranspositionTable,
@@ -20,7 +21,7 @@ impl HighDepthTranspositionTable {
 }
 
 impl TranspositionTable for HighDepthTranspositionTable {
-    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove) {
+    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove, prime_variation: Option<Vec<ChessMove>>) {
         // Only keep entries of sufficient depth
         if search_depth < self.minimal_depth {
             return;
@@ -34,6 +35,7 @@ impl TranspositionTable for HighDepthTranspositionTable {
                     depth_searched: search_depth,
                     evaluation,
                     best_move,
+                    prime_variation,
                 });
             },
             Entry::Occupied(mut o) => {
@@ -44,6 +46,7 @@ impl TranspositionTable for HighDepthTranspositionTable {
                         depth_searched: search_depth,
                         evaluation,
                         best_move,
+                        prime_variation,
                     });
                 }
             },

@@ -36,7 +36,8 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     let mut transposition_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
-        Some(SearchDepth::Depth(max_depth - current_depth)),
+        // Some(SearchDepth::Depth(max_depth - current_depth)),
+        None, // TODO: CHECK THIS
     ) {
         transposition_move = Some(solution.best_move);
 
@@ -114,6 +115,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                     SearchDepth::Depth(max_depth - current_depth),
                     eval_bound,
                     best_move,
+                    best_search_result.critical_path(),
                 );
 
                 return T::make_search_result(
@@ -153,6 +155,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                     SearchDepth::Depth(max_depth - current_depth),
                     eval_bound,
                     best_move,
+                    best_search_result.critical_path(),
                 );
 
                 return T::make_search_result(

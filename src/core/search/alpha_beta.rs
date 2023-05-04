@@ -83,30 +83,66 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     let mut already_found_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
-        Some(SearchDepth::Depth(max_depth - current_depth)),
+        None,
     ) {
-        already_found_move = Some(solution.best_move);
-        // match (solution.evaluation, board.side_to_move()) {
-        //
-        // }
-        if solution.evaluation > alpha {
-            alpha = solution.evaluation;
-        }
-        if solution.evaluation < beta {
-            beta = solution.evaluation;
-        }
-        let eval_bound = match (board.side_to_move(), beta < alpha) {
-            (_, false) => EvalBound::Exact(solution.evaluation.board_evaluation()),
-            (Color::White, true) => EvalBound::LowerBound(solution.evaluation.board_evaluation()),
-            (Color::Black, true) => EvalBound::UpperBound(solution.evaluation.board_evaluation()),
-        };
-        if beta <= alpha {
-            return T::make_search_result(
-                solution.best_move,
-                eval_bound,
-                None,
-                None,
-            )
+        already_found_move = Some(solution.best_move); // register best move for re-use in move ordering
+
+        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) {
+            // Already found something deep enough, so no need to recalculate
+            match board.side_to_move() {
+                Color::White => {
+                    match solution.evaluation {
+                        EvalBound::UpperBound(_) => (),
+                        EvalBound::Exact(_) => { // Not an upper bound so re-usable
+                            return T::make_search_result(
+                                solution.best_move,
+                                solution.evaluation,
+                                None,
+                                solution.prime_variation.clone(),
+                            )
+                        },
+                        EvalBound::LowerBound(x) => {
+                            if solution.evaluation > beta {
+                                return T::make_search_result(
+                                    solution.best_move,
+                                    solution.evaluation,
+                                    None,
+                                    solution.prime_variation.clone(),
+                                )
+                            }
+                            if solution.evaluation > alpha {
+                                alpha = EvalBound::Exact(x);
+                            }
+                        }
+                    }
+                },
+                Color::Black => {
+                    match solution.evaluation {
+                        EvalBound::LowerBound(_) => (),
+                        EvalBound::Exact(_) => { // Not a lower bound, so re-usable for black
+                            return T::make_search_result(
+                                solution.best_move,
+                                solution.evaluation,
+                                None,
+                                solution.prime_variation.clone(),
+                            )
+                        },
+                        EvalBound::UpperBound(x) => {
+                            if solution.evaluation < alpha {
+                                return T::make_search_result(
+                                    solution.best_move,
+                                    solution.evaluation,
+                                    None,
+                                    solution.prime_variation.clone(),
+                                );
+                            }
+                            if solution.evaluation < beta {
+                                beta = EvalBound::Exact(x);
+                            }
+                        }
+                    }
+                },
+            }
         }
     }
 
@@ -123,7 +159,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         );
     }
 
-    let all_moves = order_moves(
+    let all_moves: Vec<ChessMove> = order_moves(
         board,
         // transposition_table,
         already_found_move,
@@ -150,10 +186,16 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // let mut search_result = T::default();
     let mut best_search_result = T::default();
 
+    if all_moves.len() == 0 {
+        panic!("WARNING continuing with empty all_moves");
+    }
+    let mut moves_looked_at = 0;
     if board.side_to_move() == Color::White {
-        best_eval = EvalBound::Exact(BoardEvaluation::BlackMate(0));
+        best_eval = EvalBound::UpperBound(BoardEvaluation::BlackMate(0));
 
         for chess_move in all_moves.into_iter() {
+            //TODO: remove
+            moves_looked_at += 1;
         // 'outer: for moves in all_moves { // first capture moves, then non-capture moves
         //     for (chess_move, move_evaluation) in moves.iter() {
             let new_board = &board.make_move_new(chess_move);
@@ -199,26 +241,36 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 max_selective_depth,
             );
 
+            // TODO: what to do when all fail low (all have upperbound below alpha)?
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
-            if search_result.board_evaluation() >= best_eval {
+            if search_result.board_evaluation() >= best_eval { // TODO: what to do when combining Upperbound w/ Exact
                 best_eval = search_result.board_evaluation();
                 best_move = chess_move;
                 // best_path = search_result.critical_path();
                 best_search_result = search_result;
+            } else { // TODO: Remove this else
+                if best_eval == EvalBound::UpperBound(BoardEvaluation::BlackMate(0)) {
+                    println!("Compare failed");
+                    println!("best eval {best_eval:?}");
+                    println!("new eval {:?}", search_result.board_evaluation());
+                }
             }
+
 
             // alpha = max(alpha, best_eval);
             if best_eval > alpha {
-                alpha = best_eval;
+                alpha = EvalBound::Exact(best_eval.board_evaluation());
             }
             if beta < alpha {
                 break;
             }
         }
     } else { // black to play
-        best_eval = EvalBound::Exact(BoardEvaluation::WhiteMate(0));
+        best_eval = EvalBound::LowerBound(BoardEvaluation::WhiteMate(0));
 
         for chess_move in all_moves.into_iter() {
+            //TODO: remove
+            moves_looked_at += 1;
         // 'outer: for moves in all_moves {
         //     for (chess_move, move_evaluation) in moves.iter() {
             let new_board = &board.make_move_new(chess_move);
@@ -275,12 +327,20 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 
             // beta = min(beta, best_eval);
             if best_eval < beta {
-                beta = best_eval;
+                beta = EvalBound::Exact(best_eval.board_evaluation());
             }
             if beta < alpha {
                 break;
             }
         }
+    }
+
+    if best_eval == EvalBound::Exact(BoardEvaluation::WhiteMate(0)) || best_eval == EvalBound::Exact(BoardEvaluation::BlackMate(0)) {
+        println!("mate found");
+        println!("{board}");
+        println!("depth {current_depth}");
+        println!("nodes searched {nodes_searched}");
+        println!("moves looked at {moves_looked_at}");
     }
 
     best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
@@ -291,13 +351,14 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         (Color::Black, true) => EvalBound::UpperBound(best_eval.board_evaluation()),
     };
 
+    best_search_result.prepend_move(best_move);
     transposition_table.update(
         board,
         SearchDepth::Depth(max_depth - current_depth),
         eval_bound,
         best_move,
+        best_search_result.critical_path(),
     );
-    best_search_result.prepend_move(best_move);
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
     best_search_result.set_board_evaluation(eval_bound);

@@ -9,7 +9,7 @@ use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 pub type HashTranspositionTable = HashMap<Board, SearchInfo, BuildNoHashHasher<u64>>;
 
 impl TranspositionTable for HashTranspositionTable {
-    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove) {
+    fn update(&mut self, board: &Board, search_depth: SearchDepth, evaluation: EvalBound, best_move: ChessMove, prime_variation: Option<Vec<ChessMove>>) {
         let current_entry = self.entry(board.clone());
 
         match current_entry {
@@ -18,6 +18,7 @@ impl TranspositionTable for HashTranspositionTable {
                     depth_searched: search_depth,
                     evaluation,
                     best_move,
+                    prime_variation,
                 });
             },
             Entry::Occupied(mut o) => {
@@ -28,6 +29,7 @@ impl TranspositionTable for HashTranspositionTable {
                         depth_searched: search_depth,
                         evaluation,
                         best_move,
+                        prime_variation,
                     });
                 }
             },
