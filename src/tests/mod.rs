@@ -4,11 +4,12 @@ use thiserror::Error;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::tests::epd::{EPDParseError, EPDRecord};
 
-#[cfg(test)]
 pub mod win_at_chess;
 pub mod low_ply_tests;
 pub mod epd;
 pub mod eval_bound;
+pub mod mt_alpha_beta_equivalence;
+
 
 
 #[derive(Error, Debug, Copy, Clone)]

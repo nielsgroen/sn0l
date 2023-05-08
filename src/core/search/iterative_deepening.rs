@@ -98,7 +98,7 @@ fn log_info_search_results<T: SearchResult>(
     depth: u32,
     selective_depth: u32
 ) {
-    let score_string = match (side_to_move, search_result.board_evaluation().board_evaluation()) {
+    let score_string = match (side_to_move, search_result.eval_bound().board_evaluation()) {
         (Color::White, BoardEvaluation::PieceScore(Centipawns(x))) => {
             format!("cp {}", x)
         },

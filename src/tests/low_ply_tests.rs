@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
+use crate::core::search::SearchDepth;
+use crate::core::search::transpositions::high_depth_transposition::HighDepthTranspositionTable;
 use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 use crate::input::protocol_interpreter::CalculateOptions;
 use crate::tests::{check_position, epd, log_failed_positions, TestError};
@@ -19,7 +21,7 @@ fn check_positions() -> Result<()> {
     let mut failed_positions = vec![];
     for record in records.into_iter() {
         let result = check_position(&record, |board| {
-            let mut transposition_table = NoTranspositionTable::default();
+            let mut transposition_table = HighDepthTranspositionTable::new(SearchDepth::Depth(2));
             let (result, _, _): (DebugSearchResult, _, _) = iterative_deepening_search(
                 board,
                 &mut transposition_table,

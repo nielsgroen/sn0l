@@ -15,8 +15,8 @@ pub trait SearchResult {
     fn set_best_move(&mut self, chess_move: ChessMove);
     fn best_move(&self) -> ChessMove;
 
-    fn set_board_evaluation(&mut self, board_evaluation: EvalBound);
-    fn board_evaluation(&self) -> EvalBound;
+    fn set_eval_bound(&mut self, board_evaluation: EvalBound);
+    fn eval_bound(&self) -> EvalBound;
 
     fn set_nodes_searched(&mut self, nodes_searched: Option<u32>);
     fn nodes_searched(&self) -> Option<u32>;

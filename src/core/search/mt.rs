@@ -1,5 +1,6 @@
+use std::cmp::Ordering;
 use chess::{Board, ChessMove, Color, MoveGen};
-use crate::core::evaluation::{bubble_evaluation, game_status};
+use crate::core::evaluation::{bubble_evaluation, game_status, unbubble_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::common::check_game_over;
@@ -9,7 +10,7 @@ use crate::core::search::SearchDepth;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
 /// MT: The MT in MTD, meaning Memory-Enhanced Test
-/// An alteration of Pearl's Test with memory (a transposition table)
+/// An alteration of Pearl's Test with memory (through the use of a transposition table)
 
 
 pub fn search_mt<T: SearchResult + Default + Clone> (
@@ -22,7 +23,8 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     max_depth: u32,
     // max_selective_depth: u32,
 ) -> T {
-    let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
+    let mut test_value = test_value;
+
     let mut nodes_searched: u32 = 1;
 
     let mut move_gen = MoveGen::new_legal(board);
@@ -36,25 +38,32 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     let mut transposition_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
-        // Some(SearchDepth::Depth(max_depth - current_depth)),
-        None, // TODO: CHECK THIS
+        None,
     ) {
         transposition_move = Some(solution.best_move);
 
-        if solution.evaluation > test_value || solution.evaluation < test_value {
-            return T::make_search_result(
-                solution.best_move,
-                solution.evaluation,
-                Some(1),
-                None,
-            )
+        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) {
+            // CAN BE FALSE: even though seems like would always be true
+            // solution.evaluation > test_value || solution.evaluation < test_value || solution.evaluation == test_value
+            // EvalBound is PartialOrd, but NOT Ord
+            if solution.evaluation > test_value || solution.evaluation < test_value || solution.evaluation == test_value {
+                return T::make_search_result(
+                    solution.best_move,
+                    solution.evaluation,
+                    Some(1),
+                    None,
+                )
+            }
         }
     }
 
     if current_depth >= max_depth {
         // TODO: if want to add in quiescence search add that in
+        let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
+
         return T::make_search_result(
             ChessMove::default(),
+            // eval_bound,
             EvalBound::Exact(current_evaluation),
             None,
             None
@@ -69,10 +78,11 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     );
 
     let mut best_eval: EvalBound;
+    test_value.set_board_evaluation(unbubble_evaluation(test_value.board_evaluation()));
     if board.side_to_move() == Color::White {
-        best_eval = EvalBound::Exact(BoardEvaluation::BlackMate(0));
+        best_eval = EvalBound::UpperBound(BoardEvaluation::BlackMate(0));
     } else {
-        best_eval = EvalBound::Exact(BoardEvaluation::WhiteMate(0));
+        best_eval = EvalBound::LowerBound(BoardEvaluation::WhiteMate(0));
     }
 
     let mut best_move = ChessMove::default();
@@ -84,6 +94,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             &chess_move,
             board.side_to_move(),
         );
+        // println!("current depth {}", current_depth);
 
         if board.side_to_move() == Color::White {
             let search_result: T = search_mt(
@@ -96,18 +107,20 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                 max_depth,
                 // max_selective_depth,
             );
-            best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
 
-            if search_result.board_evaluation() >= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() >= best_eval {
+                best_eval = search_result.eval_bound();
+
+                // Increase the mate in `x` to `x+1`
+                best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
                 best_move = chess_move;
                 // best_path = search_result.critical_path();
                 best_search_result = search_result.clone();
+                best_search_result.prepend_move(chess_move);
             }
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() > test_value {
-                best_search_result.prepend_move(chess_move);
+            if search_result.eval_bound() > test_value {
                 let eval_bound = EvalBound::LowerBound(best_eval.board_evaluation());
 
                 transposition_table.update(
@@ -136,18 +149,20 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                 max_depth,
                 // max_selective_depth,
             );
-            best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
 
-            if search_result.board_evaluation() <= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() <= best_eval {
+                best_eval = search_result.eval_bound();
+
+                // Increase the mate in `x` to `x+1`
+                best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
                 best_move = chess_move;
                 // best_path = search_result.critical_path();
                 best_search_result = search_result.clone();
+                best_search_result.prepend_move(chess_move);
             }
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() < test_value {
-                best_search_result.prepend_move(chess_move);
+            if search_result.eval_bound() < test_value {
                 let eval_bound = EvalBound::UpperBound(best_eval.board_evaluation());
 
                 transposition_table.update(
@@ -168,11 +183,22 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
         }
     }
 
+    // let eval_bound = EvalBound::Exact(test_value.board_evaluation());
+    let eval_bound = best_eval;
 
-    // TODO: rework set eval_bound, update TT, return exact result
-    // let eval_bound = EvalBound::Exact()
+    transposition_table.update(
+        board,
+        SearchDepth::Depth(max_depth - current_depth),
+        eval_bound,
+        best_move,
+        best_search_result.critical_path(),
+    );
 
-
-    todo!()
+    T::make_search_result(
+        best_move,
+        eval_bound,
+        Some(nodes_searched),
+        best_search_result.critical_path(),
+    )
 }
 

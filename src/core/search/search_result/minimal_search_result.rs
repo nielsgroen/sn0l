@@ -37,11 +37,11 @@ impl SearchResult for MinimalSearchResult {
         self.best_move
     }
 
-    fn set_board_evaluation(&mut self, board_evaluation: EvalBound) {
+    fn set_eval_bound(&mut self, board_evaluation: EvalBound) {
         self.board_evaluation = board_evaluation;
     }
 
-    fn board_evaluation(&self) -> EvalBound {
+    fn eval_bound(&self) -> EvalBound {
         self.board_evaluation
     }
 

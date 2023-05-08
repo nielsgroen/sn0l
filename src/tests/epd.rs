@@ -55,7 +55,6 @@ impl FromStr for EPDRecord {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        println!("{s}");
         let mut parts = s.split("; ");
 
         let fen_best_move = parts.next().ok_or(EPDParseError::Empty)?;
@@ -64,7 +63,7 @@ impl FromStr for EPDRecord {
 
         let mut fen = fen.clone().join(" ");
         fen.push_str(" 0 1");
-        println!("{fen}");
+
         let best_move = best_move.get(1).ok_or(EPDParseError::InvalidBestMove)?;
         let board = Board::from_str(&fen).map_err(|_| EPDParseError::InvalidFEN)?;
 

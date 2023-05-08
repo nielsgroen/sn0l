@@ -15,7 +15,7 @@ use crate::input::protocol_interpreter::CalculateOptions;
 use crate::tests::{check_position, log_failed_positions, TestError};
 
 // const DEPTH: u32 = 10;
-const EPD_PATH: &str = "./src/tests/assets/win_at_chess.epd";
+pub const EPD_PATH: &str = "./src/tests/assets/win_at_chess.epd";
 
 #[test]
 fn check_positions() -> Result<()> {

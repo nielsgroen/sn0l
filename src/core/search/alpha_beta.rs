@@ -91,7 +91,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
             match board.side_to_move() {
                 Color::White => {
                     match solution.evaluation {
-                        EvalBound::UpperBound(_) => (),
+                        EvalBound::UpperBound(_) => (), // TODO: check if less than alpha
                         EvalBound::Exact(_) => { // Not an upper bound so re-usable
                             return T::make_search_result(
                                 solution.best_move,
@@ -117,7 +117,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
                 },
                 Color::Black => {
                     match solution.evaluation {
-                        EvalBound::LowerBound(_) => (),
+                        EvalBound::LowerBound(_) => (), // TODO: check if more than beta
                         EvalBound::Exact(_) => { // Not a lower bound, so re-usable for black
                             return T::make_search_result(
                                 solution.best_move,
@@ -160,12 +160,12 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 
     let all_moves: Vec<ChessMove> = order_moves(
         board,
-        // transposition_table,
         already_found_move,
         &mut move_gen,
         false,
     );
 
+    // TODO: check unbubbling
     let mut best_eval;
     let mut best_search_result = T::default();
 
@@ -196,8 +196,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
             );
 
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
-            if search_result.board_evaluation() >= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() >= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = chess_move;
                 best_search_result = search_result;
             }
@@ -235,8 +235,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() <= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() <= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = chess_move;
                 best_search_result = search_result;
             }
@@ -269,7 +269,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     );
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
-    best_search_result.set_board_evaluation(eval_bound);
+    best_search_result.set_eval_bound(eval_bound);
     best_search_result
 }
 
@@ -379,8 +379,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             );
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() >= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() >= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = chess_move;
                 best_search_result = search_result;
                 best_search_result.prepend_move(best_move);
@@ -428,8 +428,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             );
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() >= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() >= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = ChessMove::default();
                 best_search_result = T::make_search_result(
                     best_move,
@@ -479,8 +479,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             );
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() <= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() <= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = chess_move;
                 best_search_result = search_result;
                 best_search_result.prepend_move(best_move);
@@ -525,8 +525,8 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
             );
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.board_evaluation() <= best_eval {
-                best_eval = search_result.board_evaluation();
+            if search_result.eval_bound() <= best_eval {
+                best_eval = search_result.eval_bound();
                 best_move = ChessMove::default();
                 best_search_result = T::make_search_result(
                     best_move,
@@ -575,7 +575,7 @@ pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     // );
     best_search_result.set_nodes_searched(Some(nodes_searched));
     best_search_result.set_best_move(best_move);
-    best_search_result.set_board_evaluation(eval_bound);
+    best_search_result.set_eval_bound(eval_bound);
     best_search_result
 }
 
