@@ -47,10 +47,10 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
     visited_boards: Vec<u64>,
     options: CalculateOptions,
 ) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
-    let mut max_search_depth: u32 = 1;
+    // let mut max_search_depth: u32 = 1;
 
     // let selective_depth: u32 = min(10, max_search_depth); // TODO
-    let selective_depth: u32 = 10;
+    // let selective_depth: u32 = 10;
     // TODO: Set this up
     // for max_depth in 1..max_search_depth {
     //
@@ -86,12 +86,12 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
 
     (
         search_result,
-        max_search_depth,
-        selective_depth,
+        current_depth,
+        current_depth,
     )
 }
 
-fn log_info_search_results<T: SearchResult>(
+pub fn log_info_search_results<T: SearchResult>(
     search_result: &T,
     side_to_move: Color,
     duration: Duration,

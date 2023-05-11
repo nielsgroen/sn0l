@@ -43,7 +43,7 @@ pub fn piece_value(piece: Piece) -> Centipawns {
 pub struct Centipawns(pub i64);
 
 impl Centipawns {
-    pub fn new(val: i64) -> Centipawns {
+    pub const fn new(val: i64) -> Centipawns {
         Centipawns(val)
     }
 }
@@ -105,6 +105,15 @@ pub enum BoardEvaluation {
     BlackMate(u32),
     PieceScore(Centipawns),
     WhiteMate(u32),
+}
+
+impl BoardEvaluation {
+    pub fn change_centipawns(&self, change: Centipawns) -> Self {
+        match self {
+            BoardEvaluation::PieceScore(x) => BoardEvaluation::PieceScore(*x + change),
+            a => *a,
+        }
+    }
 }
 
 impl Display for BoardEvaluation {

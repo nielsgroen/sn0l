@@ -171,9 +171,6 @@ fn check_mt_different() -> Result<()> {
     Ok(())
 }
 
-
-
-
-fn log_dissimilar_answers(id: &str, expected: &DebugSearchResult, actual: &DebugSearchResult) {
+pub fn log_dissimilar_answers(id: &str, expected: &DebugSearchResult, actual: &DebugSearchResult) {
     println!("Failed {id}, (expected {expected:?}, got {actual:?})");
 }

@@ -9,7 +9,7 @@ pub mod low_ply_tests;
 pub mod epd;
 pub mod eval_bound;
 pub mod mt_alpha_beta_equivalence;
-
+pub mod mtdf_alpha_beta_equivalence;
 
 
 #[derive(Error, Debug, Copy, Clone)]
