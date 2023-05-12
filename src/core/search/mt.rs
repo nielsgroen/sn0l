@@ -46,7 +46,9 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             // CAN BE FALSE: even though seems like would always be true
             // solution.evaluation > test_value || solution.evaluation < test_value || solution.evaluation == test_value
             // EvalBound is PartialOrd, but NOT Ord
-            if solution.evaluation > test_value || solution.evaluation < test_value || solution.evaluation == test_value {
+            if (solution.evaluation > test_value && solution.evaluation.board_evaluation() > test_value.board_evaluation())
+                || (solution.evaluation < test_value && solution.evaluation.board_evaluation() < test_value.board_evaluation())
+                || (solution.evaluation == test_value && solution.evaluation.board_evaluation() == test_value.board_evaluation()) {
                 return T::make_search_result(
                     solution.best_move,
                     solution.evaluation,

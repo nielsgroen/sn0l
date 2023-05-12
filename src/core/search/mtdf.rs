@@ -19,7 +19,7 @@ pub fn mtdf_iterative_deepening_search<T: SearchResult + Default + Clone>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
     visited_boards: Vec<u64>,
-    start_point: BoardEvaluation,
+    // start_point: BoardEvaluation,
     options: CalculateOptions,
 ) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
     let now = Instant::now();
@@ -50,13 +50,6 @@ pub fn mtdf_iterative_deepening_search<T: SearchResult + Default + Clone>(
         );
         current_depth += 1;
     }
-
-    let search_result = T::make_search_result(
-        search_result.best_move(),
-        EvalBound::Exact(search_result.eval_bound().board_evaluation()),
-        search_result.nodes_searched(),
-        search_result.critical_path(),
-    );
 
     (
         search_result,
@@ -103,7 +96,9 @@ pub fn mtdf_search<T: SearchResult + Default + Clone>(
     // let mut upperbound = EvalBound::LowerBound(BoardEvaluation::WhiteMate(0));
     let mut upperbound = BoardEvaluation::WhiteMate(0);
 
+    // let mut mtdf_iter = 0;
     let mut result = T::default();
+    let mut nodes_searched = 0;
     while lowerbound < upperbound {
         result = search_mt(
             board,
@@ -114,10 +109,20 @@ pub fn mtdf_search<T: SearchResult + Default + Clone>(
             0,
             depth,
         );
+        nodes_searched += result.nodes_searched().unwrap_or(1);
+
+        // println!("mtdf depth {}, iteration {:?}: {:?}", depth, mtdf_iter, result.eval_bound());
+        // println!("current_test_value used: {:?}", current_test_value);
+        // mtdf_iter += 1;
 
         match result.eval_bound() {
             EvalBound::Exact(_) => {
-                return result;
+                return T::make_search_result(
+                    result.best_move(),
+                    result.eval_bound(),
+                    Some(nodes_searched),
+                    result.critical_path(),
+                );
             },
             EvalBound::UpperBound(x) => {
                 // Result found is `x` or less
@@ -137,7 +142,12 @@ pub fn mtdf_search<T: SearchResult + Default + Clone>(
     // Accounts for instability in search due to transposition table
     // Usually `lowerbound == upperbound` here
     // But not always: just return anyways
-    result
+    T::make_search_result(
+        result.best_move(),
+        EvalBound::Exact(result.eval_bound().board_evaluation()),
+        Some(nodes_searched),
+        result.critical_path(),
+    )
 }
 
 

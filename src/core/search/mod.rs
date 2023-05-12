@@ -4,6 +4,7 @@ use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 use crate::core::search::iterative_deepening::iterative_deepening_search;
+use crate::core::search::mtdf::mtdf_iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::transpositions::EvalBound;
@@ -82,7 +83,13 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
             SearchCommand::NewGame => transposition_table = HighDepthTranspositionTable::new(SearchDepth::Depth(2)),
             SearchCommand::Calculate(options) => {
 
-                let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = iterative_deepening_search(
+                // let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = iterative_deepening_search(
+                //     &main_board,
+                //     &mut transposition_table,
+                //     visited_boards.clone(),
+                //     options,
+                // );
+                let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = mtdf_iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
                     visited_boards.clone(),

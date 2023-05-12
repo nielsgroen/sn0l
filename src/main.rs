@@ -52,6 +52,7 @@ fn start_uci_protocol() -> anyhow::Result<()> {
             return Ok(());
         }
 
+        break; // TODO: remove
         // run again: GUI may have tried some other protocol, e.g. `xboard`
     }
 
