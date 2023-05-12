@@ -20,6 +20,8 @@ pub mod alpha_beta;
 pub mod mtdf;
 pub mod mt;
 pub mod common;
+pub mod mtdbi;
+pub mod mtd;
 
 
 /// The information about what search has been done on a particular node.
