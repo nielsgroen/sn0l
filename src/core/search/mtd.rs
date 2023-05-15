@@ -130,6 +130,19 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
             },
         };
 
+        // TODO: make debug only
+        if upperbound < lowerbound {
+            println!("UNSTABLE SEARCH");
+            println!("lowerbound {:?}, upperbound {:?}", lowerbound, upperbound);
+            let path = result.critical_path().unwrap();
+            for chess_move in path.into_iter() {
+                print!("{} ", chess_move);
+            }
+            println!("");
+            // println!("result path: {}", result.critical_path());
+            println!("result best_move: {}", result.best_move());
+            println!("result nodes_searched: {:?}", result.nodes_searched());
+        }
         current_test_value = step_fn(current_test_value, lowerbound, upperbound);
     }
 
@@ -157,9 +170,7 @@ pub fn avg_bounds(lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> B
             return upperbound;
         },
         _ => {
-            panic!("MTD-F boundary calculations: lowerbound {lowerbound} and upperbound {upperbound} are impossible");
+            panic!("MTD boundary calculations: lowerbound {lowerbound} and upperbound {upperbound} are impossible");
         },
     }
 }
-
-

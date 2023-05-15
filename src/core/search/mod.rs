@@ -4,6 +4,7 @@ use crate::Command;
 use crate::input::protocol_interpreter::CalculateOptions;
 
 use crate::core::search::iterative_deepening::iterative_deepening_search;
+use crate::core::search::mtdbi::mtdbi_iterative_deepening_search;
 use crate::core::search::mtdf::mtdf_iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::SearchResult;
@@ -91,7 +92,7 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
                 //     visited_boards.clone(),
                 //     options,
                 // );
-                let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = mtdf_iterative_deepening_search(
+                let (search_result, depth, selective_depth): (DebugSearchResult, _, _) = mtdbi_iterative_deepening_search(
                     &main_board,
                     &mut transposition_table,
                     visited_boards.clone(),
@@ -102,6 +103,5 @@ pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
             },
             SearchCommand::Stop => (),
         }
-
     }
 }

@@ -3,6 +3,7 @@ use chess::{Board, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, game_status, unbubble_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
+use crate::core::score::BoardEvaluation::BlackMate;
 use crate::core::search::common::check_game_over;
 use crate::core::search::move_ordering::order_moves;
 use crate::core::search::search_result::SearchResult;
@@ -49,11 +50,12 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             if (solution.evaluation > test_value && solution.evaluation.board_evaluation() > test_value.board_evaluation())
                 || (solution.evaluation < test_value && solution.evaluation.board_evaluation() < test_value.board_evaluation())
                 || (solution.evaluation == test_value && solution.evaluation.board_evaluation() == test_value.board_evaluation()) {
+
                 return T::make_search_result(
                     solution.best_move,
                     solution.evaluation,
                     Some(1),
-                    None,
+                    solution.prime_variation.clone(),
                 )
             }
         }
@@ -80,7 +82,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     );
 
     let mut best_eval: EvalBound;
-    test_value.set_board_evaluation(unbubble_evaluation(test_value.board_evaluation()));
+
     if board.side_to_move() == Color::White {
         best_eval = EvalBound::UpperBound(BoardEvaluation::BlackMate(0));
     } else {
@@ -96,25 +98,30 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             &chess_move,
             board.side_to_move(),
         );
-        // println!("current depth {}", current_depth);
 
         if board.side_to_move() == Color::White {
+            let mut new_test_value = test_value.clone();
+            new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
+
             let search_result: T = search_mt(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
                 simple_evaluation + improvement,  // + because white
-                test_value,
+                new_test_value,
                 current_depth + 1,
                 max_depth,
                 // max_selective_depth,
             );
 
-            if search_result.eval_bound() >= best_eval {
-                best_eval = search_result.eval_bound();
+            let mut bubbled_search_eval = search_result.eval_bound();
+            bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
 
+            if bubbled_search_eval.board_evaluation() >= best_eval.board_evaluation() {
+                best_eval = search_result.eval_bound();
                 // Increase the mate in `x` to `x+1`
                 best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
+
                 best_move = chess_move;
                 // best_path = search_result.critical_path();
                 best_search_result = search_result.clone();
@@ -122,7 +129,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             }
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.eval_bound() > test_value {
+            if best_eval > test_value && best_eval.board_evaluation() > test_value.board_evaluation() {
                 let eval_bound = EvalBound::LowerBound(best_eval.board_evaluation());
 
                 transposition_table.update(
@@ -133,30 +140,37 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                     best_search_result.critical_path(),
                 );
 
+                // println!("returning {:?}", best_eval);
                 return T::make_search_result(
                     best_move,
-                    eval_bound,
+                    EvalBound::LowerBound(eval_bound.board_evaluation()),
                     Some(nodes_searched),
                     best_search_result.critical_path(),
                 );
             }
         } else { // Black to move
+            let mut new_test_value = test_value.clone();
+            new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
+
             let search_result: T = search_mt(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
                 simple_evaluation - improvement,  // - because black
-                test_value,
+                new_test_value,
                 current_depth + 1,
                 max_depth,
                 // max_selective_depth,
             );
 
-            if search_result.eval_bound() <= best_eval {
-                best_eval = search_result.eval_bound();
+            let mut bubbled_search_eval = search_result.eval_bound();
+            bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
 
+            if bubbled_search_eval.board_evaluation() <= best_eval.board_evaluation() {
+                best_eval = search_result.eval_bound();
                 // Increase the mate in `x` to `x+1`
                 best_eval.set_board_evaluation(bubble_evaluation(best_eval.board_evaluation()));
+
                 best_move = chess_move;
                 // best_path = search_result.critical_path();
                 best_search_result = search_result.clone();
@@ -164,13 +178,13 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             }
             nodes_searched += search_result.nodes_searched().unwrap_or(1);
 
-            if search_result.eval_bound() < test_value {
+            if best_eval < test_value && best_eval.board_evaluation() < test_value.board_evaluation() {
                 let eval_bound = EvalBound::UpperBound(best_eval.board_evaluation());
 
                 transposition_table.update(
                     board,
                     SearchDepth::Depth(max_depth - current_depth),
-                    eval_bound,
+                    EvalBound::UpperBound(eval_bound.board_evaluation()),
                     best_move,
                     best_search_result.critical_path(),
                 );
@@ -185,8 +199,14 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
         }
     }
 
-    // let eval_bound = EvalBound::Exact(test_value.board_evaluation());
-    let eval_bound = best_eval;
+    let eval_bound;
+    if best_eval.board_evaluation() < test_value.board_evaluation() {
+        eval_bound = EvalBound::UpperBound(best_eval.board_evaluation());
+    } else if best_eval.board_evaluation() > test_value.board_evaluation() {
+        eval_bound = EvalBound::LowerBound(best_eval.board_evaluation());
+    } else {
+        eval_bound = EvalBound::Exact(best_eval.board_evaluation());
+    }
 
     transposition_table.update(
         board,
