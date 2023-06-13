@@ -11,6 +11,7 @@ mod eval_bound;
 mod mt_alpha_beta_equivalence;
 mod mtdf_alpha_beta_equivalence;
 mod mtdbi_alpha_beta_equivalence;
+mod conspiracy_counter;
 
 
 #[derive(Error, Debug, Copy, Clone)]

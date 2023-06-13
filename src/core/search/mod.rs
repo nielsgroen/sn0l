@@ -23,6 +23,8 @@ pub mod mt;
 pub mod common;
 pub mod mtdbi;
 pub mod mtd;
+mod mt_w_conspiracy;
+pub mod conspiracy_counter;
 
 
 /// The information about what search has been done on a particular node.
