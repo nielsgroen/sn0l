@@ -1,6 +1,6 @@
 use crate::core::score::{BoardEvaluation, Centipawns};
 use anyhow::Result;
-use crate::core::search::conspiracy_counter::ConspiracyCounter;
+use crate::core::search::conspiracy_counter::{ConspiracyCounter, ConspiracyValue};
 
 enum TreeNode {
     Leaf(BoardEvaluation),
@@ -32,17 +32,17 @@ fn check_conspiracy_simple_tree() -> Result<()> {
     let result = calculate_conspiracy_counter(&tree, 21, 10);
     println!("{:?}", result);
 
-    assert!(result, ConspiracyCounter {
+    assert_eq!(result, ConspiracyCounter {
         bucket_size: 10,
-        node_value: Centipawns::PieceScore(Centipawns(40)),
+        node_value: BoardEvaluation::PieceScore(Centipawns(40)),
         // middle bucket is [-5, 5).
         // if you want to get over 40, you need to change one conspirator
         // for values over 60 you just need two (the 40 and the first 20)
         // for values over 70 you need to change any three
-        up_buckets: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0],
+        up_buckets: vec![ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0)],
         // if you want to go lower than 40 you just need to change the 40 node
         // if you wanna get lower than 20, you will need to change the two nodes of value 20 as well
-        down_buckets: vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0],
+        down_buckets: vec![ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(2), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0)],
     });
 
     Ok(())

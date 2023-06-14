@@ -1,15 +1,57 @@
 use std::cmp::{max, min};
+use std::ops::{Add, AddAssign, Sub};
 use crate::core::score::{BoardEvaluation, Centipawns};
 
+// enum order is important for the derive Ord
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum ConspiracyValue {
+    Count(u32),
+    Unreachable,
+}
 
-#[derive(Clone, Debug)]
+impl Add for ConspiracyValue {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (ConspiracyValue::Count(x), ConspiracyValue::Count(y)) => ConspiracyValue::Count(x + y),
+            _ => ConspiracyValue::Unreachable,
+        }
+    }
+}
+
+impl Sub for ConspiracyValue {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (ConspiracyValue::Count(x), ConspiracyValue::Count(y)) => ConspiracyValue::Count(x - y),
+            _ => ConspiracyValue::Unreachable,
+        }
+    }
+}
+
+impl AddAssign for ConspiracyValue {
+    fn add_assign(&mut self, rhs: Self) {
+        match (*self, rhs) {
+            (ConspiracyValue::Count(x), ConspiracyValue::Count(y)) => {
+                *self = ConspiracyValue::Count(x + y);
+            }
+            _ => {
+                *self = ConspiracyValue::Unreachable;
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConspiracyCounter {
     // Holds the delta-needed(i,T,V) for each bucket: the number of conspirators needed to get V
     // node i in tree T, with target value V
     pub bucket_size: u32,
     pub node_value: BoardEvaluation,
-    pub up_buckets: Vec<u32>,
-    pub down_buckets: Vec<u32>,
+    pub up_buckets: Vec<ConspiracyValue>,
+    pub down_buckets: Vec<ConspiracyValue>,
 }
 
 impl ConspiracyCounter {
@@ -21,8 +63,8 @@ impl ConspiracyCounter {
         Self {
             bucket_size,
             node_value: BoardEvaluation::PieceScore(Centipawns::new(0)),
-            up_buckets: vec![0; num_buckets],
-            down_buckets: vec![0; num_buckets],
+            up_buckets: vec![ConspiracyValue::Count(0); num_buckets],
+            down_buckets: vec![ConspiracyValue::Count(0); num_buckets],
         }
     }
 
@@ -30,21 +72,34 @@ impl ConspiracyCounter {
         let mut result = ConspiracyCounter::new(bucket_size, num_buckets);
 
         let corresponding_bucket = ConspiracyCounter::which_bucket(value, bucket_size, num_buckets);
-        result.up_buckets[corresponding_bucket] = 1;
-        result.down_buckets[corresponding_bucket] = 1;
+        result.up_buckets[corresponding_bucket] = ConspiracyValue::Count(1);
+        result.down_buckets[corresponding_bucket] = ConspiracyValue::Count(1);
 
         result.node_value = value;
 
         result
     }
 
+    pub fn from_terminal_node(bucket_size: u32, num_buckets: usize, value: BoardEvaluation) -> Self {
+        let mut result = ConspiracyCounter::new(bucket_size, num_buckets);
+
+        let corresponding_bucket = ConspiracyCounter::which_bucket(value, bucket_size, num_buckets);
+        result.up_buckets[corresponding_bucket] = ConspiracyValue::Unreachable;
+        result.down_buckets[corresponding_bucket] = ConspiracyValue::Unreachable;
+
+        result.node_value = value;
+
+        result
+
+    }
+
     pub fn reset(&mut self) {
         for item in &mut self.up_buckets {
-            *item = 0;
+            *item = ConspiracyValue::Count(0);
         }
 
         for item in &mut self.down_buckets {
-            *item = 0;
+            *item = ConspiracyValue::Count(0);
         }
     }
 
@@ -55,11 +110,11 @@ impl ConspiracyCounter {
         let new_node_value = max(self.node_value, other.node_value);
 
         // Setting up the up_buckets
-        let mut new_up_buckets = vec![0; num_buckets];
+        let mut new_up_buckets = vec![ConspiracyValue::Count(0); num_buckets];
 
-        let mut own_cumulative_score = 0;
-        let mut other_cumulative_score = 0;
-        let mut cumulative_score = 0;
+        let mut own_cumulative_score = ConspiracyValue::Count(0);
+        let mut other_cumulative_score = ConspiracyValue::Count(0);
+        let mut cumulative_score = ConspiracyValue::Count(0);
 
         // Remember: When merging children of MAX nodes
         // take the MINIMUM of the cumulative scores for the delta-needed for values V
@@ -74,11 +129,11 @@ impl ConspiracyCounter {
         }
 
         // Setting up the down_buckets
-        let mut new_down_buckets = vec![0; num_buckets];
+        let mut new_down_buckets = vec![ConspiracyValue::Count(0); num_buckets];
 
-        let mut own_cumulative_score = 0;
-        let mut other_cumulative_score = 0;
-        let mut cumulative_score = 0;
+        let mut own_cumulative_score = ConspiracyValue::Count(0);
+        let mut other_cumulative_score = ConspiracyValue::Count(0);
+        let mut cumulative_score = ConspiracyValue::Count(0);
 
         // Remember: When merging children of MAX nodes
         // take the SUM of the cumulative scores for the delta-needed for values V
@@ -104,11 +159,11 @@ impl ConspiracyCounter {
         let new_node_value = min(self.node_value, other.node_value);
 
         // Setting up the down_buckets
-        let mut new_down_buckets = vec![0; num_buckets];
+        let mut new_down_buckets = vec![ConspiracyValue::Count(0); num_buckets];
 
-        let mut own_cumulative_score = 0;
-        let mut other_cumulative_score = 0;
-        let mut cumulative_score = 0;
+        let mut own_cumulative_score = ConspiracyValue::Count(0);
+        let mut other_cumulative_score = ConspiracyValue::Count(0);
+        let mut cumulative_score = ConspiracyValue::Count(0);
 
         // Remember: When merging children of MIN nodes
         // take the MINIMUM of the cumulative scores for the delta-needed for values V
@@ -123,11 +178,11 @@ impl ConspiracyCounter {
         }
 
         // Setting up the up_buckets
-        let mut new_up_buckets = vec![0; num_buckets];
+        let mut new_up_buckets = vec![ConspiracyValue::Count(0); num_buckets];
 
-        let mut own_cumulative_score = 0;
-        let mut other_cumulative_score = 0;
-        let mut cumulative_score = 0;
+        let mut own_cumulative_score = ConspiracyValue::Count(0);
+        let mut other_cumulative_score = ConspiracyValue::Count(0);
+        let mut cumulative_score = ConspiracyValue::Count(0);
 
         // Remember: When merging children of MIN nodes
         // take the SUM of the cumulative scores for the delta-needed for values V
@@ -145,15 +200,6 @@ impl ConspiracyCounter {
         self.down_buckets = new_down_buckets;
         self.up_buckets = new_up_buckets;
     }
-
-    // pub fn add_leaf(&mut self, leaf_value: BoardEvaluation) {
-    //
-    // }
-
-    // pub fn add_terminal_node(&mut self, leaf_value: BoardEvaluation) {
-    //     // Watch out: terminal_value can be a DRAW
-    //
-    // }
 
     /// Returns the index of which bucket the value corresponds to
     fn which_bucket(value: BoardEvaluation, bucket_size: u32, num_buckets: usize) -> usize {

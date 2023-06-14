@@ -5,6 +5,7 @@ use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::score::BoardEvaluation::BlackMate;
 use crate::core::search::common::check_game_over;
+use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::move_ordering::order_moves;
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::SearchDepth;
@@ -14,7 +15,7 @@ use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 /// An alteration of Pearl's Test with memory (through the use of a transposition table)
 
 
-pub fn search_mt<T: SearchResult + Default + Clone> (
+pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
     mut visited_boards: Vec<u64>,
@@ -24,6 +25,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
     max_depth: u32,
     // max_selective_depth: u32,
 ) -> T {
+    // ) -> (T, ConspiracyCounter) {
     let mut test_value = test_value;
 
     let mut nodes_searched: u32 = 1;
@@ -33,9 +35,12 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
 
     visited_boards.push(board.get_hash());
     if let Some(search_result) = check_game_over(board, board_status, &visited_boards) {
+        // TODO: add conspiracy counter for terminal node
         return search_result;
     }
 
+    // TODO: check transposition return
+    // should it be empty?
     let mut transposition_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
@@ -103,7 +108,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             let mut new_test_value = test_value.clone();
             new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
 
-            let search_result: T = search_mt(
+            let search_result: T = search_mt_w_conspiracy(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
@@ -113,6 +118,8 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                 max_depth,
                 // max_selective_depth,
             );
+
+            // TODO: Merge conspiracy_counters as children of max node
 
             let mut bubbled_search_eval = search_result.eval_bound();
             bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
@@ -152,7 +159,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
             let mut new_test_value = test_value.clone();
             new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
 
-            let search_result: T = search_mt(
+            let search_result: T = search_mt_w_conspiracy(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
@@ -162,6 +169,8 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                 max_depth,
                 // max_selective_depth,
             );
+
+            // TODO: Merge conspiracy_counters as children of min node
 
             let mut bubbled_search_eval = search_result.eval_bound();
             bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
@@ -216,6 +225,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
         best_search_result.critical_path(),
     );
 
+    // TODO: return conspiracy_counter as well
     T::make_search_result(
         best_move,
         eval_bound,
