@@ -183,7 +183,7 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
-                simple_evaluation + improvement,  // + because white
+                simple_evaluation - improvement,  // - because black
                 new_test_value,
                 current_depth + 1,
                 max_depth,

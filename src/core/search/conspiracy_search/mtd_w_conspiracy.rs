@@ -23,7 +23,7 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone>(
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
     bucket_size: u32,
     num_buckets: usize,
-    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter),
+    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter, &EvalBound, &EvalBound),
 ) -> (T, ConspiracyCounter, u32, u32) { // (SearchResult, depth, selective_depth)
     let now = Instant::now();
     let mut current_depth = 2;
@@ -87,7 +87,7 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
     bucket_size: u32,
     num_buckets: usize,
-    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter),
+    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter, &EvalBound, &EvalBound),
 ) -> (T, ConspiracyCounter) {
     let mut current_test_value = start_point;
     let current_evaluation = single_evaluation(board, board.status());
@@ -139,37 +139,26 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         result = search_result.0;
         let found_conspiracy_counter = search_result.1;
 
-        if conspiracy_counter.is_none() {
-            conspiracy_counter = Some(found_conspiracy_counter);
-        } else {
-            conspiracy_merge_fn(&mut conspiracy_counter.as_mut().unwrap(), &found_conspiracy_counter);
-        }
-
-        nodes_searched += result.nodes_searched().unwrap_or(1);
-
         match result.eval_bound() {
-            EvalBound::Exact(_) => {
-                return (
-                    T::make_search_result(
-                        result.best_move(),
-                        result.eval_bound(),
-                        Some(nodes_searched),
-                        result.critical_path(),
-                    ),
-                    conspiracy_counter.unwrap()
-                );
+            EvalBound::Exact(x) => {
+                lowerbound = x;
+                upperbound = x;
             },
             EvalBound::UpperBound(x) => {
-                // Result found is `x` or less
-                // => so `x` is the new upper bound
                 upperbound = x;
             },
             EvalBound::LowerBound(x) => {
-                // Result found is `x` or more
-                // => so `x` is the new lower bound
                 lowerbound = x;
             },
-        };
+        }
+
+        if conspiracy_counter.is_none() {
+            conspiracy_counter = Some(found_conspiracy_counter);
+        } else {
+            conspiracy_merge_fn(&mut conspiracy_counter.as_mut().unwrap(), &found_conspiracy_counter, &EvalBound::LowerBound(lowerbound), &EvalBound::UpperBound(upperbound));
+        }
+
+        nodes_searched += result.nodes_searched().unwrap_or(1);
 
         // Apparently the search was unstable
         // TODO: make debug only

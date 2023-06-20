@@ -44,6 +44,6 @@ pub fn mtdbi_search<T: SearchResult + Default + Clone>(
     )
 }
 
-fn determine_mtdbi_step(_last_test_value: BoardEvaluation, lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> BoardEvaluation {
+pub fn determine_mtdbi_step(_last_test_value: BoardEvaluation, lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> BoardEvaluation {
     avg_bounds(lowerbound, upperbound)
 }

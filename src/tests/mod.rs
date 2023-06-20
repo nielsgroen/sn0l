@@ -12,6 +12,7 @@ mod mt_alpha_beta_equivalence;
 mod mtdf_alpha_beta_equivalence;
 mod mtdbi_alpha_beta_equivalence;
 mod conspiracy_counter;
+mod low_ply_tests_conspiracy;
 
 
 #[derive(Error, Debug, Copy, Clone)]
