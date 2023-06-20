@@ -5,19 +5,26 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use anyhow;
 use chess::{Board};
 use clap::Parser;
+use sn0l::core::search::iterative_deepening::iterative_deepening_search;
+use sn0l::core::search::search_result::minimal_search_result::MinimalSearchResult;
+use sn0l::core::search::SearchCommand;
+use sn0l::core::search::transpositions::no_transposition::NoTranspositionTable;
+use sn0l::input;
+use sn0l::input::protocol_interpreter::{CalculateOptions, Command};
+use sn0l::input::stdin::listen_to_stdin;
 
-use input::stdin::listen_to_stdin;
-use input::protocol_interpreter::Command;
-use crate::core::search::iterative_deepening::iterative_deepening_search;
-use crate::core::search::search_result::minimal_search_result::MinimalSearchResult;
+// use input::stdin::listen_to_stdin;
+// use input::protocol_interpreter::Command;
+// use sn0l::core::search::iterative_deepening::iterative_deepening_search;
+// use sn0l::core::search::search_result::minimal_search_result::MinimalSearchResult;
+//
+// use sn0l::core::search::SearchCommand;
+// use sn0l::core::search::transpositions::no_transposition::NoTranspositionTable;
+// use sn0l::input::protocol_interpreter::CalculateOptions;
 
-use crate::core::search::SearchCommand;
-use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
-use crate::input::protocol_interpreter::CalculateOptions;
-
-mod core;
-mod input;
-mod tests;
+// mod core;
+// mod input;
+// mod tests;
 
 // maybe this needs to be split up, because rust requires a lock around the whole thing?
 // struct GlobalState {
@@ -113,7 +120,7 @@ fn pre_option_init(input_tx: Sender<Command>, search_rx: Receiver<SearchCommand>
 
     // The thread that runs the search engine
     thread::spawn(move || {
-        core::search::start_search_engine(search_rx);
+        sn0l::core::search::start_search_engine(search_rx);
     });
 
     println!("id name sn0l 0.1");

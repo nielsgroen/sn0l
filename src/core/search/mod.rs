@@ -1,7 +1,6 @@
 use std::sync::mpsc::Receiver;
 use chess::{Board, ChessMove};
-use crate::Command;
-use crate::input::protocol_interpreter::CalculateOptions;
+use crate::input::protocol_interpreter::{CalculateOptions, Command};
 
 use crate::core::search::iterative_deepening::iterative_deepening_search;
 use crate::core::search::mtdbi::mtdbi_iterative_deepening_search;
