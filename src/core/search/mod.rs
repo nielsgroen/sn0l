@@ -23,7 +23,7 @@ pub mod mt;
 pub mod common;
 pub mod mtdbi;
 pub mod mtd;
-mod mt_w_conspiracy;
+pub mod conspiracy_search;
 pub mod conspiracy_counter;
 
 

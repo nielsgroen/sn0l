@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Sub};
 use crate::core::score::{BoardEvaluation, Centipawns};
 
@@ -53,6 +54,7 @@ pub struct ConspiracyCounter {
     pub up_buckets: Vec<ConspiracyValue>,
     pub down_buckets: Vec<ConspiracyValue>,
 }
+
 
 impl ConspiracyCounter {
     pub fn new(bucket_size: u32, num_buckets: usize) -> Self {
@@ -219,4 +221,18 @@ impl ConspiracyCounter {
         }
     }
 
+    /// Returns the upper- and lowerbounds for a given bucket
+    /// The lowerbound is inclusive, and the upperbound exclusive
+    pub fn bucket_bounds(index: usize, bucket_size: u32, num_buckets: usize) -> (BoardEvaluation, BoardEvaluation) {
+        let middle_index = num_buckets / 2;
+        let offset_from_middle = index as i64 - middle_index as i64;
+
+        let lowerbound = offset_from_middle * bucket_size as i64 - bucket_size as i64 / 2;
+        let upperbound = offset_from_middle * bucket_size as i64 + bucket_size as i64 / 2;
+
+        (
+            BoardEvaluation::PieceScore(Centipawns::new(lowerbound)),
+            BoardEvaluation::PieceScore(Centipawns::new(upperbound)),
+        )
+    }
 }

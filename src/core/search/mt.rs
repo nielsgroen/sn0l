@@ -3,7 +3,6 @@ use chess::{Board, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, game_status, unbubble_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
-use crate::core::score::BoardEvaluation::BlackMate;
 use crate::core::search::common::check_game_over;
 use crate::core::search::move_ordering::order_moves;
 use crate::core::search::search_result::SearchResult;

@@ -3,7 +3,6 @@ use chess::{Board, ChessMove, Color, MoveGen};
 use crate::core::evaluation::{bubble_evaluation, game_status, unbubble_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
-use crate::core::score::BoardEvaluation::BlackMate;
 use crate::core::search::common::check_game_over;
 use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::move_ordering::order_moves;
@@ -24,8 +23,9 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
     current_depth: u32,
     max_depth: u32,
     // max_selective_depth: u32,
-) -> T {
-    // ) -> (T, ConspiracyCounter) {
+    bucket_size: u32,
+    num_buckets: usize,
+) -> (T, ConspiracyCounter) {
     let mut test_value = test_value;
 
     let mut nodes_searched: u32 = 1;
@@ -34,13 +34,11 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
     let board_status = game_status(board, move_gen.len() != 0);
 
     visited_boards.push(board.get_hash());
-    if let Some(search_result) = check_game_over(board, board_status, &visited_boards) {
-        // TODO: add conspiracy counter for terminal node
-        return search_result;
+    if let Some(search_result) = check_game_over::<T>(board, board_status, &visited_boards) {
+        let search_eval = search_result.eval_bound().board_evaluation();
+        return (search_result, ConspiracyCounter::from_terminal_node(bucket_size, num_buckets, search_eval));
     }
 
-    // TODO: check transposition return
-    // should it be empty?
     let mut transposition_move = None;
     if let Some(solution) = transposition_table.get_transposition(
         board,
@@ -56,12 +54,17 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                 || (solution.evaluation < test_value && solution.evaluation.board_evaluation() < test_value.board_evaluation())
                 || (solution.evaluation == test_value && solution.evaluation.board_evaluation() == test_value.board_evaluation()) {
 
-                return T::make_search_result(
-                    solution.best_move,
-                    solution.evaluation,
-                    Some(1),
-                    solution.prime_variation.clone(),
-                )
+                return (
+                    T::make_search_result(
+                        solution.best_move,
+                        solution.evaluation,
+                        Some(1),
+                        solution.prime_variation.clone(),
+                    ),
+                    // Return an empty Counter, since we can't store this in the TT
+                    // And probably already accounted for during previous search at same depth
+                    ConspiracyCounter::new(bucket_size, num_buckets)
+                );
             }
         }
     }
@@ -70,12 +73,15 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
         // TODO: if want to add in quiescence search add that in
         let current_evaluation = BoardEvaluation::PieceScore(simple_evaluation);
 
-        return T::make_search_result(
-            ChessMove::default(),
-            // eval_bound,
-            EvalBound::Exact(current_evaluation),
-            None,
-            None
+        return (
+            T::make_search_result(
+                ChessMove::default(),
+                // eval_bound,
+                EvalBound::Exact(current_evaluation),
+                None,
+                None
+            ),
+            ConspiracyCounter::from_leaf(bucket_size, num_buckets, current_evaluation)
         );
     }
 
@@ -96,6 +102,7 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
 
     let mut best_move = ChessMove::default();
     let mut best_search_result= T::default();
+    let mut conspiracy_counter = None;
     for chess_move in all_moves.into_iter() {
         let new_board = &board.make_move_new(chess_move);
         let improvement = incremental_evaluation(
@@ -108,7 +115,7 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
             let mut new_test_value = test_value.clone();
             new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
 
-            let search_result: T = search_mt_w_conspiracy(
+            let (search_result, counter_result): (T, ConspiracyCounter) = search_mt_w_conspiracy(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
@@ -117,9 +124,19 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                 current_depth + 1,
                 max_depth,
                 // max_selective_depth,
+                bucket_size,
+                num_buckets,
             );
 
-            // TODO: Merge conspiracy_counters as children of max node
+            // Update the Conspiracy Counter
+            if conspiracy_counter.is_none() {
+                conspiracy_counter = Some(counter_result);
+            } else {
+                conspiracy_counter.as_mut().map(|mut x| {
+                    x.merge_max_node_children(&counter_result);
+                    x
+                });
+            }
 
             let mut bubbled_search_eval = search_result.eval_bound();
             bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
@@ -148,29 +165,41 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                 );
 
                 // println!("returning {:?}", best_eval);
-                return T::make_search_result(
-                    best_move,
-                    EvalBound::LowerBound(eval_bound.board_evaluation()),
-                    Some(nodes_searched),
-                    best_search_result.critical_path(),
-                );
+                return (
+                    T::make_search_result(
+                        best_move,
+                        EvalBound::LowerBound(eval_bound.board_evaluation()),
+                        Some(nodes_searched),
+                        best_search_result.critical_path(),
+                    ),
+                    conspiracy_counter.unwrap(),
+                )
             }
         } else { // Black to move
             let mut new_test_value = test_value.clone();
             new_test_value.set_board_evaluation(unbubble_evaluation(new_test_value.board_evaluation()));
 
-            let search_result: T = search_mt_w_conspiracy(
+            let (search_result, counter_result): (T, ConspiracyCounter) = search_mt_w_conspiracy(
                 new_board,
                 transposition_table,
                 visited_boards.clone(),
-                simple_evaluation - improvement,  // - because black
+                simple_evaluation + improvement,  // + because white
                 new_test_value,
                 current_depth + 1,
                 max_depth,
                 // max_selective_depth,
+                bucket_size,
+                num_buckets,
             );
 
-            // TODO: Merge conspiracy_counters as children of min node
+            if conspiracy_counter.is_none() {
+                conspiracy_counter = Some(counter_result);
+            } else {
+                conspiracy_counter.as_mut().map(|mut x| {
+                    x.merge_min_node_children(&counter_result);
+                    x
+                });
+            }
 
             let mut bubbled_search_eval = search_result.eval_bound();
             bubbled_search_eval.set_board_evaluation(bubble_evaluation(bubbled_search_eval.board_evaluation()));
@@ -198,11 +227,14 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                     best_search_result.critical_path(),
                 );
 
-                return T::make_search_result(
-                    best_move,
-                    eval_bound,
-                    Some(nodes_searched),
-                    best_search_result.critical_path(),
+                return (
+                        T::make_search_result(
+                        best_move,
+                        eval_bound,
+                        Some(nodes_searched),
+                        best_search_result.critical_path(),
+                    ),
+                    conspiracy_counter.unwrap()
                 );
             }
         }
@@ -225,12 +257,14 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
         best_search_result.critical_path(),
     );
 
-    // TODO: return conspiracy_counter as well
-    T::make_search_result(
-        best_move,
-        eval_bound,
-        Some(nodes_searched),
-        best_search_result.critical_path(),
+    (
+        T::make_search_result(
+            best_move,
+            eval_bound,
+            Some(nodes_searched),
+            best_search_result.critical_path(),
+        ),
+        conspiracy_counter.unwrap()
     )
 }
 
