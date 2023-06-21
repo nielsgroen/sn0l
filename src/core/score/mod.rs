@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Neg, Sub, SubAssign};
 use chess::{NUM_PIECES, Piece};
 use chess::BitBoard;
+use serde::{Serialize, Deserialize};
 
 pub mod score_tables;
 
@@ -39,7 +40,7 @@ pub fn piece_value(piece: Piece) -> Centipawns {
 }
 
 // Used for board evaluation, scored in 100ths of a pawn
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Centipawns(pub i64);
 
 impl Centipawns {
@@ -99,7 +100,7 @@ impl Display for Centipawns {
 /// WhiteMate(1) > WhiteMate(+inf) > Centipawn(+inf) > Centipawn(0) > Centipawn(-inf) > BlackMate(+inf) > BlackMate(1)
 ///
 /// `WhiteMate(0)` => White has checkmated Black.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub enum BoardEvaluation {
     // Make sure to keep this order, so #derive(Ord) works correctly
     BlackMate(u32),

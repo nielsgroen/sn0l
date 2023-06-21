@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use chess::{Board, ChessMove};
+use serde::{Serialize, Deserialize};
 use crate::core::score::BoardEvaluation;
 use crate::core::search::{SearchDepth, SearchInfo};
 
@@ -25,7 +26,7 @@ pub trait TranspositionTable {
 }
 
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub enum EvalBound {
     UpperBound(BoardEvaluation),
     Exact(BoardEvaluation),

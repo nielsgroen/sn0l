@@ -1,10 +1,11 @@
 use std::cmp::{max, min};
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Sub};
+use serde::{Serialize, Deserialize};
 use crate::core::score::{BoardEvaluation, Centipawns};
 
 // enum order is important for the derive Ord
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ConspiracyValue {
     Count(u32),
     Unreachable,
@@ -45,7 +46,7 @@ impl AddAssign for ConspiracyValue {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ConspiracyCounter {
     // Holds the delta-needed(i,T,V) for each bucket: the number of conspirators needed to get V
     // node i in tree T, with target value V

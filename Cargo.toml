@@ -15,10 +15,14 @@ itertools = "0.10.3"
 anyhow = "1.0.58"
 thiserror = "1.0.38"
 nohash = "0.2.0"
-clap = { version = "4.0.19", features = ["derive"] }
+clap = { version = "4.3.5", features = ["derive"] }
 lazy_static = "1.4.0"
 regex = "1.8.1"
 csv = "1.2.1"
+sqlx = { version = "0.6.3", features = ["sqlite", "json", "runtime-tokio-native-tls"] }
+tokio = { version = "1.28.2", features = ["macros"] }
+serde = "1.0.160"
+serde_json = "1.0.96"
 
 [profile.release]
 lto = true

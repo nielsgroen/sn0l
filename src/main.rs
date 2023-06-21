@@ -13,24 +13,6 @@ use sn0l::input;
 use sn0l::input::protocol_interpreter::{CalculateOptions, Command};
 use sn0l::input::stdin::listen_to_stdin;
 
-// use input::stdin::listen_to_stdin;
-// use input::protocol_interpreter::Command;
-// use sn0l::core::search::iterative_deepening::iterative_deepening_search;
-// use sn0l::core::search::search_result::minimal_search_result::MinimalSearchResult;
-//
-// use sn0l::core::search::SearchCommand;
-// use sn0l::core::search::transpositions::no_transposition::NoTranspositionTable;
-// use sn0l::input::protocol_interpreter::CalculateOptions;
-
-// mod core;
-// mod input;
-// mod tests;
-
-// maybe this needs to be split up, because rust requires a lock around the whole thing?
-// struct GlobalState {
-//     debug_enabled: bool,
-//
-// }
 
 fn main() -> anyhow::Result<()> {
     let cli = input::command_line::Cli::parse();
