@@ -68,6 +68,7 @@ pub async fn create_tables_if_not_exists(db: &SqlitePool) {
             nodes_evaluated INTEGER NOT NULL,
             evaluation TEXT NOT NULL,
             conspiracy_counter TEXT,
+            move_num INTEGER,
             timestamp INTEGER,
             FOREIGN KEY(run_id) REFERENCES run(id)
         );
@@ -85,6 +86,7 @@ pub async fn create_tables_if_not_exists(db: &SqlitePool) {
             nodes_evaluated INTEGER NOT NULL,
             eval_bound TEXT NOT NULL,
             conspiracy_counter TEXT,
+            search_num INTEGER,
             timestamp INTEGER,
             FOREIGN KEY(position_search_id) REFERENCES position_search(id)
         );

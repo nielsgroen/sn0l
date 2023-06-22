@@ -12,7 +12,7 @@ use super::protocol_interpreter::{Command, ProtocolInterpreter};
 pub struct UciInterpreter;
 
 impl UciInterpreter {
-    fn determine_board<'a>(mut args: impl Iterator<Item=&'a str>) -> Board {
+    pub fn determine_board<'a>(mut args: impl Iterator<Item=&'a str>) -> Board {
         match args.next() {
             Some("startpos") => {
                 let mut board = Board::default();
@@ -45,7 +45,7 @@ impl UciInterpreter {
         }
     }
 
-    fn determine_pre_move_board<'a>(mut args: impl Iterator<Item=&'a str>) -> Board {
+    pub fn determine_pre_move_board<'a>(mut args: impl Iterator<Item=&'a str>) -> Board {
         match args.next() {
             Some("startpos") => {
                 Board::default()
@@ -62,7 +62,6 @@ impl UciInterpreter {
     }
 
     fn determine_calculate_options<'a>(mut args: impl Iterator<Item=&'a str>) -> CalculateOptions {
-
         match args.next() {
             Some("infinite") => CalculateOptions::Infinite,
             Some("movetime") => CalculateOptions::MoveTime(

@@ -35,6 +35,7 @@ fn check_positions() -> Result<()> {
                 BUCKET_SIZE,
                 NUM_BUCKETS,
                 merge_remove_overwritten,
+                |_, _| {},
             );
 
             println!("{result:?}");

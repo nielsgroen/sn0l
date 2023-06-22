@@ -67,7 +67,6 @@ impl SearchCommand {
 
 /// The function to have a thread start functioning as the search engine.
 pub fn start_search_engine(search_rx: Receiver<SearchCommand>) {
-
     // init Transposition Table
     // let mut transposition_table = NoTranspositionTable::default();
     let mut transposition_table = HighDepthTranspositionTable::new(SearchDepth::Depth(2));

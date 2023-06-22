@@ -9,7 +9,7 @@ use crate::core::search::transpositions::EvalBound;
 
 /// The file that contains all the row types for inserting into each table of the DB
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SearchAlgorithm {
     AlphaBeta,
     MtdBi,
@@ -26,7 +26,7 @@ impl Display for SearchAlgorithm {
     }
 }
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ConspiracyMergeFn {
     MergeRemoveOverwritten,
 }
@@ -145,6 +145,7 @@ pub struct PositionSearchRow {
     pub nodes_evaluated: u32,
     pub evaluation: BoardEvaluation,
     pub conspiracy_counter: Option<ConspiracyCounter>,
+    pub move_num: u32,
     pub timestamp: i64,
 }
 
@@ -159,8 +160,10 @@ impl PositionSearchRow {
                 nodes_evaluated,
                 evaluation,
                 conspiracy_counter,
+                move_num,
                 timestamp
             ) VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
@@ -178,6 +181,7 @@ impl PositionSearchRow {
             .bind(self.nodes_evaluated)
             .bind(self.evaluation.to_string())
             .bind(self.conspiracy_counter.clone().map(|x| serde_json::to_string(&x).unwrap()))
+            .bind(self.move_num)
             .bind(self.timestamp)
             .execute(db)
             .await
@@ -194,6 +198,7 @@ pub struct MTSearchRow {
     pub nodes_evaluated: u32,
     pub eval_bound: EvalBound,
     pub conspiracy_counter: Option<ConspiracyCounter>,
+    pub search_num: u32,
     pub timestamp: i64,
 }
 
@@ -207,8 +212,10 @@ impl MTSearchRow {
                 nodes_evaluated,
                 eval_bound,
                 conspiracy_counter,
+                search_num,
                 timestamp
             ) VALUES (
+                ?,
                 ?,
                 ?,
                 ?,
@@ -224,6 +231,7 @@ impl MTSearchRow {
             .bind(self.nodes_evaluated)
             .bind(format!("{:?}", self.eval_bound))
             .bind(self.conspiracy_counter.clone().map(|x| serde_json::to_string(&x).unwrap()))
+            .bind(self.search_num)
             .bind(self.timestamp)
             .execute(db)
             .await
