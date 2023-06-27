@@ -49,6 +49,27 @@ impl EvalBound {
             EvalBound::LowerBound(_) => EvalBound::LowerBound(board_evaluation),
         };
     }
+
+    pub fn is_exact(&self) -> bool {
+        match self {
+            EvalBound::Exact(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_lowerbound(&self) -> bool {
+        match self {
+            EvalBound::LowerBound(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_upperbound(&self) -> bool {
+        match self {
+            EvalBound::UpperBound(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl PartialOrd for EvalBound {

@@ -41,7 +41,7 @@ impl TranspositionTable for HighDepthTranspositionTable {
             Entry::Occupied(mut o) => {
                 let search_info = o.get();
 
-                if search_info.depth_searched != max(search_info.depth_searched, search_depth) {
+                if search_info.depth_searched <= search_depth {
                     o.insert(SearchInfo {
                         depth_searched: search_depth,
                         evaluation,

@@ -72,6 +72,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     // Do draw detection before quiescence search
     // => No draw detection necessary when only capturing
     // But still need draw detection on last move before quiescence search
+
+    let been_here_before = visited_boards.contains(&board.get_hash());
     visited_boards.push(board.get_hash());
     let visited_boards = visited_boards;
     if let Some(search_result) = check_game_over(board, board_status, &visited_boards) {
@@ -86,7 +88,7 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
     ) {
         already_found_move = Some(solution.best_move); // register best move for re-use in move ordering
 
-        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) {
+        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) && !been_here_before {
             // Already found something deep enough, so no need to recalculate
             match board.side_to_move() {
                 Color::White => {
@@ -165,7 +167,6 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
         false,
     );
 
-    // TODO: check unbubbling
     let mut best_eval;
     let mut best_search_result = T::default();
 

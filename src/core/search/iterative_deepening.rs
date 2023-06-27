@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use chess::{Board, Color};
+use chess::{Board, ChessMove, Color};
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::alpha_beta::search_depth_pruned;
 use crate::core::search::search_result::SearchResult;
@@ -124,9 +124,23 @@ pub fn log_info_search_results<T: SearchResult>(
         Some(x) => format!("nodes {x}"),
     };
 
+    let critical_path_string = determine_critical_path_string(search_result.critical_path());
+    let millis = duration.as_millis();
+
+    if millis > 0 && search_result.nodes_searched().is_some() {
+        let nodes_per_second = search_result.nodes_searched().unwrap() as u128 / duration.as_millis() * 1000;
+        println!("info nps {nodes_per_second}");
+    }
+    println!(
+        "info score {score_string} depth {depth} seldepth {selective_depth} {nodes_string} time {} {critical_path_string}",
+        duration.as_millis(),
+    );
+}
+
+pub fn determine_critical_path_string(critical_path: Option<Vec<ChessMove>>) -> String {
     let critical_path_string;
-    if search_result.critical_path().is_some() {
-        let critical_path = search_result.critical_path()
+    if critical_path.is_some() {
+        let critical_path = critical_path
             .clone()
             .unwrap()
             .into_iter()
@@ -139,14 +153,5 @@ pub fn log_info_search_results<T: SearchResult>(
         critical_path_string = "".to_string();
     }
 
-    let millis = duration.as_millis();
-
-    if millis > 0 && search_result.nodes_searched().is_some() {
-        let nodes_per_second = search_result.nodes_searched().unwrap() as u128 / duration.as_millis() * 1000;
-        println!("info nps {nodes_per_second}");
-    }
-    println!(
-        "info score {score_string} depth {depth} seldepth {selective_depth} {nodes_string} time {} {critical_path_string}",
-        duration.as_millis(),
-    );
+    critical_path_string
 }
