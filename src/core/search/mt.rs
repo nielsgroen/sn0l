@@ -62,7 +62,7 @@ pub fn search_mt<T: SearchResult + Default + Clone> (
                 )
             } else {
                 match solution.evaluation {
-                    EvalBound::Exact(x) => {
+                    EvalBound::Exact(_) => {
 
                         return T::make_search_result(
                             solution.best_move,

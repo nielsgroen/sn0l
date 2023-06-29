@@ -34,6 +34,7 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
     let mut move_gen = MoveGen::new_legal(board);
     let board_status = game_status(board, move_gen.len() != 0);
 
+    let been_here_before = visited_boards.contains(&board.get_hash());
     visited_boards.push(board.get_hash());
     if let Some(search_result) = check_game_over::<T>(board, board_status, &visited_boards) {
         let search_eval = search_result.eval_bound().board_evaluation();
@@ -47,7 +48,10 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
     ) {
         transposition_move = Some(solution.best_move);
 
-        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) {
+        // We don't want to find a TT value if this position has already been played.
+        // Prevents moving upper- and lowerbounds on checkmates to infinity.
+        // And possibly helps with draw detection.
+        if solution.depth_searched >= SearchDepth::Depth(max_depth - current_depth) && !been_here_before {
             // CAN BE FALSE: even though seems like would always be true
             // solution.evaluation > test_value || solution.evaluation < test_value || solution.evaluation == test_value
             // EvalBound is PartialOrd, but NOT Ord
@@ -64,8 +68,24 @@ pub fn search_mt_w_conspiracy<T: SearchResult + Default + Clone> (
                     ),
                     // Return an empty Counter, since we can't store this in the TT
                     // And probably already accounted for during previous search at same depth
-                    ConspiracyCounter::new(bucket_size, num_buckets)
+                    ConspiracyCounter::new(bucket_size, num_buckets),
                 );
+            } else {
+                match solution.evaluation {
+                    EvalBound::Exact(_) => {
+
+                        return (
+                            T::make_search_result(
+                            solution.best_move,
+                            solution.evaluation,
+                            Some(1),
+                            solution.prime_variation.clone(),
+                        ),
+                            ConspiracyCounter::new(bucket_size, num_buckets),
+                        );
+                    },
+                    _ => (),
+                }
             }
         }
     }

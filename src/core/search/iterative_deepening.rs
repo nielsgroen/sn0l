@@ -26,10 +26,16 @@ pub fn is_still_searching(
         } => {
             match board.side_to_move() {
                 Color::White => {
-                    (search_start.elapsed().as_millis() as u64).saturating_sub(white_increment) < white_time / 100
+                    let already_searched = search_start.elapsed().as_millis() as u64;
+                    let extra_calc_time = 5 * already_searched + 10;
+
+                    (already_searched + extra_calc_time).saturating_sub(white_increment) < white_time / 50
                 },
                 Color::Black => {
-                    (search_start.elapsed().as_millis() as u64).saturating_sub(black_increment) < black_time / 100
+                    let already_searched = search_start.elapsed().as_millis() as u64;
+                    let extra_calc_time = 5 * already_searched;
+
+                    (already_searched + extra_calc_time).saturating_sub(black_increment) < black_time / 50
                 },
             }
         },
