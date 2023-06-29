@@ -1,6 +1,6 @@
-use std::future::Future;
+use std::cmp::{max, min};
 use std::time::{Instant, Duration, SystemTime, UNIX_EPOCH};
-use chess::{Board, ChessMove};
+use chess::{Board, ChessMove, Color};
 use sqlx::SqlitePool;
 use crate::analysis::database::rows::{MTSearchRow, PositionSearchRow};
 use crate::core::evaluation::single_evaluation;
@@ -144,16 +144,26 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
     // But nothing is lower than `at most immediate mate for black`
     // let mut lowerbound = EvalBound::UpperBound(BoardEvaluation::BlackMate(0));
     let mut lowerbound = BoardEvaluation::BlackMate(0);
+    let mut highest_lowerbound = lowerbound;
 
     // The starting upperbound is as high as possible
     // `At least immediate mate for white`
     // let mut upperbound = EvalBound::LowerBound(BoardEvaluation::WhiteMate(0));
     let mut upperbound = BoardEvaluation::WhiteMate(0);
+    let mut lowest_upperbound = upperbound;
 
-    let mut result = T::default();
+    let mut unstable_search_counter = 0;
+
+    let mut result = T::make_search_result(
+        ChessMove::default(),
+        EvalBound::UpperBound(BoardEvaluation::BlackMate(0)),
+        None,
+        None,
+    );
     let mut conspiracy_counter = None;
     let mut nodes_searched = 0;
-    while lowerbound < upperbound {
+    // while lowerbound < upperbound {
+    while !result.eval_bound().is_exact() {
         let time = SystemTime::now();
         let search_result = search_mt_w_conspiracy(
             board,
@@ -169,6 +179,8 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         result = search_result.0;
         let found_conspiracy_counter = search_result.1;
 
+        nodes_searched += result.nodes_searched().unwrap_or(1);
+
         // Update the mt_searches log
         mt_searches.push(MTSearchRow {
             position_search_id: 0, // THIS NEEDS TO BE OVERWRITTEN ON POSITION_SEARCH INSERT
@@ -182,41 +194,127 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         });
         mt_search_num += 1;
 
-
-        match result.eval_bound() {
-            EvalBound::Exact(x) => {
-                lowerbound = x;
-                upperbound = x;
-            },
-            EvalBound::UpperBound(x) => {
-                upperbound = x;
-            },
-            EvalBound::LowerBound(x) => {
-                lowerbound = x;
-            },
-        }
-
         if conspiracy_counter.is_none() {
             conspiracy_counter = Some(found_conspiracy_counter);
         } else {
             conspiracy_merge_fn(&mut conspiracy_counter.as_mut().unwrap(), &found_conspiracy_counter, &EvalBound::LowerBound(lowerbound), &EvalBound::UpperBound(upperbound));
         }
 
-        nodes_searched += result.nodes_searched().unwrap_or(1);
+        let newest_eval;
+        match result.eval_bound() {
+            EvalBound::Exact(_) => {
+                let position_search = PositionSearchRow {
+                    run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                    uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                    depth,
+                    time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                    nodes_evaluated: nodes_searched,
+                    evaluation: result.eval_bound().board_evaluation(),
+                    conspiracy_counter: conspiracy_counter.clone(),
+                    move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                    timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                };
+
+                return (
+                    T::make_search_result(
+                        result.best_move(),
+                        result.eval_bound(),
+                        Some(nodes_searched),
+                        result.critical_path(),
+                    ),
+                    conspiracy_counter.unwrap(),
+                    mt_searches,
+                    position_search,
+                );
+            },
+            EvalBound::UpperBound(x) => {
+                upperbound = x;
+                newest_eval = x;
+            },
+            EvalBound::LowerBound(x) => {
+                lowerbound = x;
+                newest_eval = x;
+            },
+        }
 
         // Apparently the search was unstable
         // TODO: make debug only
         if upperbound < lowerbound {
-            println!("UNSTABLE SEARCH");
+            unstable_search_counter += 1;
+
+            lowest_upperbound = min(upperbound, lowest_upperbound);
+            highest_lowerbound = max(lowerbound, highest_lowerbound);
+            println!("UNSTABLE SEARCH: logging");
             println!("lowerbound {:?}, upperbound {:?}", lowerbound, upperbound);
             let path = result.critical_path().unwrap();
             for chess_move in path.into_iter() {
                 print!("{} ", chess_move);
             }
-            println!();
+            println!("");
             // println!("result path: {}", result.critical_path());
             println!("result best_move: {}", result.best_move());
             println!("result nodes_searched: {:?}", result.nodes_searched());
+            println!("UNSTABLE SEARCH: end logging");
+
+            upperbound = newest_eval;
+            lowerbound = newest_eval;
+
+            // If search is still unstable:
+            // - if white: end on lowerbound
+            // - if black: end on upperbound
+            if unstable_search_counter > 3 {
+                match (board.side_to_move(), result.eval_bound()) {
+                    (Color::White, EvalBound::LowerBound(_)) => {
+                        let position_search = PositionSearchRow {
+                            run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                            depth,
+                            time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                            nodes_evaluated: nodes_searched,
+                            evaluation: result.eval_bound().board_evaluation(),
+                            conspiracy_counter: conspiracy_counter.clone(),
+                            move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                        };
+                        return (
+                            T::make_search_result(
+                                result.best_move(),
+                                EvalBound::Exact(result.eval_bound().board_evaluation()),
+                                Some(nodes_searched),
+                                result.critical_path(),
+                            ),
+                            conspiracy_counter.unwrap(),
+                            mt_searches,
+                            position_search,
+                        );
+                    },
+                    (Color::Black, EvalBound::UpperBound(_)) => {
+                        let position_search = PositionSearchRow {
+                            run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                            depth,
+                            time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                            nodes_evaluated: nodes_searched,
+                            evaluation: result.eval_bound().board_evaluation(),
+                            conspiracy_counter: conspiracy_counter.clone(),
+                            move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                        };
+                        return (
+                            T::make_search_result(
+                                result.best_move(),
+                                EvalBound::Exact(result.eval_bound().board_evaluation()),
+                                Some(nodes_searched),
+                                result.critical_path(),
+                            ),
+                            conspiracy_counter.unwrap(),
+                            mt_searches,
+                            position_search,
+                        );
+                    },
+                    _ => (),
+                }
+            }
         }
         current_test_value = step_fn(current_test_value, lowerbound, upperbound);
     }

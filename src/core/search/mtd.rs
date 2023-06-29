@@ -101,7 +101,6 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
 
     let mut unstable_search_counter = 0;
 
-    // let mut result = T::default();
     let mut result = T::make_search_result(
         ChessMove::default(),
         EvalBound::UpperBound(BoardEvaluation::BlackMate(0)),
@@ -121,12 +120,12 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
             depth,
         );
         nodes_searched += result.nodes_searched().unwrap_or(1);
-        println!("----------");
-        println!("start lowerbound {lowerbound}, upperbound {upperbound}");
-        println!("mt_search result eval_bound: {:?}", result.eval_bound());
-        println!("mt_search result path: {:?}", determine_critical_path_string(result.critical_path()));
-        println!("mt_search result best_move: {}", result.best_move());
-        println!("mt_search result nodes_searched: {:?}", result.nodes_searched());
+        // println!("----------");
+        // println!("start lowerbound {lowerbound}, upperbound {upperbound}");
+        // println!("mt_search result eval_bound: {:?}", result.eval_bound());
+        // println!("mt_search result path: {:?}", determine_critical_path_string(result.critical_path()));
+        // println!("mt_search result best_move: {}", result.best_move());
+        // println!("mt_search result nodes_searched: {:?}", result.nodes_searched());
 
         let newest_eval;
         match result.eval_bound() {
@@ -256,6 +255,9 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
 
 pub fn avg_bounds(lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> BoardEvaluation {
     match (lowerbound, upperbound) {
+        (BoardEvaluation::BlackMate(_), BoardEvaluation::WhiteMate(_)) => {
+            return BoardEvaluation::PieceScore(Centipawns::new(0));
+        },
         (BoardEvaluation::PieceScore(x), BoardEvaluation::PieceScore(y)) => {
             return BoardEvaluation::PieceScore(Centipawns::new((x.0 + y.0) / 2));
         },
