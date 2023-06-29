@@ -15,7 +15,8 @@ use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
 pub fn search_mt<T: SearchResult + Default + Clone> (
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     mut visited_boards: Vec<u64>,
     simple_evaluation: Centipawns,
     test_value: EvalBound, // The value to test

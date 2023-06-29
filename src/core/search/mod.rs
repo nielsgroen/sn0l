@@ -1,17 +1,16 @@
 use std::sync::mpsc::Receiver;
-use chess::{Board, ChessMove, Color};
+use chess::{Board, ChessMove};
 use crate::core::search::conspiracy_search::merging::merge_remove_overwritten;
 use crate::input::protocol_interpreter::{CalculateOptions, Command};
 
 use crate::core::search::iterative_deepening::iterative_deepening_search;
-use crate::core::search::mtd::{avg_bounds, mtd_iterative_deepening_search};
+use crate::core::search::mtd::mtd_iterative_deepening_search;
 use crate::core::search::mtdbi::{determine_mtdbi_step, mtdbi_iterative_deepening_search};
 use crate::core::search::mtdf::mtdf_iterative_deepening_search;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::search_result::SearchResult;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 use crate::core::search::transpositions::high_depth_transposition::HighDepthTranspositionTable;
-use crate::core::search::transpositions::no_transposition::NoTranspositionTable;
 
 pub mod search_result;
 pub mod transpositions;

@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 use std::time::Instant;
 use chess::{Board, ChessMove};
+use crate::analysis::database::rows::{MTSearchRow, PositionSearchRow};
 use crate::core::evaluation::single_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::iterative_deepening::{is_still_searching, log_info_search_results};
@@ -16,29 +17,34 @@ use crate::input::protocol_interpreter::CalculateOptions;
 const MTDF_STEP_SIZE: Centipawns = Centipawns::new(30);
 
 
-pub fn mtdf_iterative_deepening_search<T: SearchResult + Default + Clone>(
+pub fn mtdf_iterative_deepening_search<T: SearchResult + Default + Clone, L>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     options: CalculateOptions,
-) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
+    search_logging: L,
+) -> (T, u32, u32) where
+    L: Fn(PositionSearchRow, Vec<MTSearchRow>) { // (SearchResult, depth, selective_depth)
     mtd_iterative_deepening_search(
         board,
         transposition_table,
         visited_boards,
         options,
         determine_mtdf_step,
+        search_logging,
     )
 }
 
 
 pub fn mtdf_search<T: SearchResult + Default + Clone>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     depth: u32,
     start_point: BoardEvaluation,
-) -> T {
+) -> (T, Vec<MTSearchRow>, PositionSearchRow)  {
     mtd_search(
         board,
         transposition_table,

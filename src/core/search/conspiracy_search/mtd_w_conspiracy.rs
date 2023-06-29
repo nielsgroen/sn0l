@@ -47,6 +47,7 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone, L>(
     );
     let mut search_result = first_result.0;
     let mut conspiracy_counter = first_result.1;
+    search_logging(first_result.3, first_result.2);
 
     while is_still_searching(options, board, now, current_depth) {
         let temp_search_result = mtd_search(
@@ -107,7 +108,7 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         BoardEvaluation::PieceScore(x) => {
             simple_evaluation = x;
         },
-        _ => {
+        x => {
             return (
                 T::make_search_result(
                     ChessMove::default(),
@@ -122,8 +123,8 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
                     uci_position: "".to_string(),
                     depth,
                     time_taken: 0,
-                    nodes_evaluated: 0,
-                    evaluation: BoardEvaluation::WhiteMate(0),
+                    nodes_evaluated: 1,
+                    evaluation: x,
                     conspiracy_counter: None,
                     move_num: 0,
                     timestamp: 0,
@@ -237,8 +238,6 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
             },
         }
 
-        // Apparently the search was unstable
-        // TODO: make debug only
         if upperbound < lowerbound {
             unstable_search_counter += 1;
 

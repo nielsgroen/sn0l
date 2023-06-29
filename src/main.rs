@@ -81,7 +81,7 @@ fn start_uci_protocol() -> anyhow::Result<()> {
 fn run_benchmark() -> anyhow::Result<()> {
     println!("Started benchmark");
 
-    let (result, depth, selective_depth): (MinimalSearchResult, _, _) =
+    let (result, _depth, _selective_depth): (MinimalSearchResult, _, _) =
         iterative_deepening_search(
             &Board::default(),
             &mut NoTranspositionTable::default(),

@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
-use std::time::Instant;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use chess::{Board, ChessMove, Color};
+use crate::analysis::database::rows::{MTSearchRow, PositionSearchRow};
 use crate::core::evaluation::single_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::alpha_beta::search_alpha_beta;
@@ -14,16 +15,19 @@ use crate::input::protocol_interpreter::CalculateOptions;
 /// The base implementation of the mtd framework
 
 
-pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone>(
+pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone, L>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     options: CalculateOptions,
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
-) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
+    search_logging: L,
+) -> (T, u32, u32) where
+    L: Fn(PositionSearchRow, Vec<MTSearchRow>) { // (SearchResult, depth, selective_depth)
     let now = Instant::now();
     let mut current_depth = 2;
-    let mut search_result: T = mtd_search(
+    let (mut search_result, mt_rows, position_row): (T, _, _) = mtd_search(
         board,
         transposition_table,
         visited_boards.clone(),
@@ -31,9 +35,11 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone>(
         BoardEvaluation::PieceScore(Centipawns::new(0)),
         step_fn.clone(),
     );
+    search_logging(position_row, mt_rows);
 
     while is_still_searching(options, board, now, current_depth) {
-        search_result = mtd_search(
+        let temp_search_result = mtd_search(
+        // search_result = mtd_search(
             board,
             transposition_table,
             visited_boards.clone(),
@@ -41,6 +47,9 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone>(
             search_result.eval_bound().board_evaluation(),
             step_fn.clone(),
         );
+        search_result = temp_search_result.0;
+        search_logging(temp_search_result.2, temp_search_result.1);
+
         let duration = now.elapsed();
         log_info_search_results(
             &search_result,
@@ -62,12 +71,13 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone>(
 
 pub fn mtd_search<T: SearchResult + Default + Clone>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     depth: u32,
     start_point: BoardEvaluation,
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
-) -> T {
+) -> (T, Vec<MTSearchRow>, PositionSearchRow) {
     let mut current_test_value = start_point;
     let current_evaluation = single_evaluation(board, board.status());
 
@@ -76,15 +86,33 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         BoardEvaluation::PieceScore(x) => {
             simple_evaluation = x;
         },
-        _ => {
-            return T::make_search_result(
-                ChessMove::default(),
-                EvalBound::Exact(current_evaluation),
-                None,
-                None,
+        x => {
+            return (
+                T::make_search_result(
+                    ChessMove::default(),
+                    EvalBound::Exact(current_evaluation),
+                    None,
+                    None,
+                ),
+                vec![],
+                PositionSearchRow {
+                    run_id: 0,
+                    uci_position: "".to_string(),
+                    depth,
+                    time_taken: 0,
+                    nodes_evaluated: 1,
+                    evaluation: x,
+                    conspiracy_counter: None,
+                    move_num: 0,
+                    timestamp: 0,
+                }
             );
         },
     }
+    let total_search_time = SystemTime::now();
+
+    let mut mt_search_num = 0;
+    let mut mt_searches = vec![];
 
     // The starting lowerbound is as low as possible
     // This is not exactly a bound
@@ -108,8 +136,8 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         None,
     );
     let mut nodes_searched = 0;
-    // while lowerbound < upperbound {
     while !result.eval_bound().is_exact() {
+        let time = SystemTime::now();
         result = search_mt(
             board,
             transposition_table,
@@ -127,14 +155,43 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         // println!("mt_search result best_move: {}", result.best_move());
         // println!("mt_search result nodes_searched: {:?}", result.nodes_searched());
 
+        // Update the mt_searches log
+        mt_searches.push(MTSearchRow {
+            position_search_id: 0, // THIS NEEDS TO BE OVERWRITTEN ON POSITION_SEARCH INSERT
+            test_value: current_test_value,
+            time_taken: time.elapsed().expect("time went backwards").as_millis() as u32,
+            nodes_evaluated: result.nodes_searched().unwrap_or(0),
+            eval_bound: result.eval_bound(),
+            conspiracy_counter: None,
+            search_num: mt_search_num,
+            timestamp: time.duration_since(UNIX_EPOCH).expect("time went backwards").as_secs() as i64,
+        });
+        mt_search_num += 1;
+
         let newest_eval;
         match result.eval_bound() {
             EvalBound::Exact(_) => {
-                return T::make_search_result(
-                    result.best_move(),
-                    result.eval_bound(),
-                    Some(nodes_searched),
-                    result.critical_path(),
+                let position_search = PositionSearchRow {
+                    run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                    uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                    depth,
+                    time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                    nodes_evaluated: nodes_searched,
+                    evaluation: result.eval_bound().board_evaluation(),
+                    conspiracy_counter: None,
+                    move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                    timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                };
+
+                return (
+                    T::make_search_result(
+                        result.best_move(),
+                        result.eval_bound(),
+                        Some(nodes_searched),
+                        result.critical_path(),
+                    ),
+                    mt_searches,
+                    position_search,
                 );
             },
             EvalBound::UpperBound(x) => {
@@ -177,19 +234,51 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
             if unstable_search_counter > 3 {
                 match (board.side_to_move(), result.eval_bound()) {
                     (Color::White, EvalBound::LowerBound(_)) => {
-                        return T::make_search_result(
-                            result.best_move(),
-                            EvalBound::Exact(result.eval_bound().board_evaluation()),
-                            Some(nodes_searched),
-                            result.critical_path(),
+                        let position_search = PositionSearchRow {
+                            run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                            depth,
+                            time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                            nodes_evaluated: nodes_searched,
+                            evaluation: result.eval_bound().board_evaluation(),
+                            conspiracy_counter: None,
+                            move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                        };
+
+                        return (
+                            T::make_search_result(
+                                result.best_move(),
+                                EvalBound::Exact(result.eval_bound().board_evaluation()),
+                                Some(nodes_searched),
+                                result.critical_path(),
+                            ),
+                            mt_searches,
+                            position_search,
                         );
                     },
                     (Color::Black, EvalBound::UpperBound(_)) => {
-                        return T::make_search_result(
-                            result.best_move(),
-                            EvalBound::Exact(result.eval_bound().board_evaluation()),
-                            Some(nodes_searched),
-                            result.critical_path(),
+                        let position_search = PositionSearchRow {
+                            run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                            depth,
+                            time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                            nodes_evaluated: nodes_searched,
+                            evaluation: result.eval_bound().board_evaluation(),
+                            conspiracy_counter: None,
+                            move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                            timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                        };
+
+                        return (
+                            T::make_search_result(
+                                result.best_move(),
+                                EvalBound::Exact(result.eval_bound().board_evaluation()),
+                                Some(nodes_searched),
+                                result.critical_path(),
+                            ),
+                            mt_searches,
+                            position_search,
                         );
                     },
                     _ => (),
@@ -241,14 +330,30 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
         current_test_value = step_fn(current_test_value, lowerbound, upperbound);
     }
 
+    let position_search = PositionSearchRow {
+        run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+        uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+        depth,
+        time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+        nodes_evaluated: nodes_searched,
+        evaluation: result.eval_bound().board_evaluation(),
+        conspiracy_counter: None,
+        move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+        timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+    };
+
     // Accounts for instability in search due to transposition table
     // Usually `lowerbound == upperbound` here
     // But not always: just return anyways
-    T::make_search_result(
-        result.best_move(),
-        EvalBound::Exact(result.eval_bound().board_evaluation()),
-        Some(nodes_searched),
-        result.critical_path(),
+    (
+        T::make_search_result(
+            result.best_move(),
+            EvalBound::Exact(result.eval_bound().board_evaluation()),
+            Some(nodes_searched),
+            result.critical_path(),
+        ),
+        mt_searches,
+        position_search,
     )
 }
 

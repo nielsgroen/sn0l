@@ -1,4 +1,5 @@
 use chess::{Board, ChessMove};
+use crate::analysis::database::rows::{MTSearchRow, PositionSearchRow};
 use crate::core::evaluation::single_evaluation;
 use crate::core::score::BoardEvaluation;
 use crate::core::search::mt::search_mt;
@@ -10,30 +11,35 @@ use crate::input::protocol_interpreter::CalculateOptions;
 /// The code for implementing the MTD-BI search algorithm
 
 
-pub fn mtdbi_iterative_deepening_search<T: SearchResult + Default + Clone>(
+pub fn mtdbi_iterative_deepening_search<T: SearchResult + Default + Clone, L>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     options: CalculateOptions,
-) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
+    search_logging: L,
+) -> (T, u32, u32) where
+    L: Fn(PositionSearchRow, Vec<MTSearchRow>) { // (SearchResult, depth, selective_depth)
     mtd_iterative_deepening_search(
         board,
         transposition_table,
         visited_boards,
         options,
         determine_mtdbi_step,
+        search_logging,
     )
 }
 
 
 pub fn mtdbi_search<T: SearchResult + Default + Clone>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     depth: u32,
     start_point: BoardEvaluation,
     // selective_depth: u32,
-) -> T {
+) -> (T, Vec<MTSearchRow>, PositionSearchRow)  {
     mtd_search(
         board,
         transposition_table,
