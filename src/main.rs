@@ -87,6 +87,7 @@ fn run_benchmark() -> anyhow::Result<()> {
             &mut NoTranspositionTable::default(),
             Vec::new(),
             CalculateOptions::Depth(5),
+            |_, _| {},
         );
 
     println!("Done");

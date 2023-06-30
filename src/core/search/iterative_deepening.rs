@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 use chess::{Board, ChessMove, Color};
+use crate::analysis::database::rows::{MTSearchRow, PositionSearchRow};
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::alpha_beta::search_depth_pruned;
 use crate::core::search::search_result::SearchResult;
@@ -47,12 +48,14 @@ pub fn is_still_searching(
     }
 }
 
-pub fn iterative_deepening_search<T: SearchResult + Default>(
+pub fn iterative_deepening_search<T: SearchResult + Default, L>(
     board: &Board,
     transposition_table: &mut impl TranspositionTable,
     visited_boards: Vec<u64>,
     options: CalculateOptions,
-) -> (T, u32, u32) { // (SearchResult, depth, selective_depth)
+    search_logging: L,
+) -> (T, u32, u32) where
+    L: Fn(PositionSearchRow, Vec<MTSearchRow>) { // (SearchResult, depth, selective_depth)
     // let mut max_search_depth: u32 = 1;
 
     // let selective_depth: u32 = min(10, max_search_depth); // TODO
@@ -64,21 +67,26 @@ pub fn iterative_deepening_search<T: SearchResult + Default>(
     // }
     let now = Instant::now();
     let mut current_depth = 2;
-    let mut search_result: T = search_depth_pruned(
+    let (mut search_result, position_row): (T, PositionSearchRow) = search_depth_pruned(
         board,
         transposition_table,
         visited_boards.clone(),
         1,
         None,
     );
+    search_logging(position_row, vec![]);
+
     while is_still_searching(options, board, now, current_depth) {
-        search_result = search_depth_pruned(
+        let temp_search_result = search_depth_pruned(
             board,
             transposition_table,
             visited_boards.clone(),
             current_depth,
             None,
         );
+        search_result = temp_search_result.0;
+        search_logging(temp_search_result.1, vec![]);
+
         let duration = now.elapsed();
         log_info_search_results(
             &search_result,

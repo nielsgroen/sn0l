@@ -1,4 +1,6 @@
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use chess::{Board, BoardStatus, ChessMove, Color, MoveGen};
+use crate::analysis::database::rows::PositionSearchRow;
 use crate::core::evaluation::{bubble_evaluation, game_status, single_evaluation};
 use crate::core::evaluation::incremental::incremental_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
@@ -18,7 +20,7 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
     visited_boards: Vec<u64>,
     depth: u32,
     selective_depth: Option<u32>,
-) -> T {
+) -> (T, PositionSearchRow) {
     // The base evaluation used for move ordering, and static board scoring
     let selective_depth = selective_depth.unwrap_or(depth);
     let simple_eval = single_evaluation(&board, board.status());
@@ -29,7 +31,9 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
         _ => panic!("searching finished position"),
     }
 
-    let search_result = search_alpha_beta(
+    let total_search_time = SystemTime::now();
+
+    let search_result: T = search_alpha_beta(
         board,
         transposition_table,
         visited_boards,
@@ -41,7 +45,22 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
         selective_depth,
     );
 
-    search_result
+    let position_search = PositionSearchRow {
+        run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+        uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+        depth,
+        time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+        nodes_evaluated: search_result.nodes_searched().unwrap_or(0),
+        evaluation: search_result.eval_bound().board_evaluation(),
+        conspiracy_counter: None,
+        move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+        timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+    };
+
+    (
+        search_result,
+        position_search,
+    )
 }
 
 pub fn search_alpha_beta<T: SearchResult + Default>(
