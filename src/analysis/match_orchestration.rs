@@ -10,11 +10,13 @@ use crate::analysis::database::{CONFIG_TABLE, MT_SEARCH_TABLE, POSITION_SEARCH_T
 use crate::analysis::database::rows::{ConfigRow, ConspiracyMergeFn, MTSearchRow, PositionSearchRow, RunRow};
 use crate::core::evaluation::game_status;
 use crate::core::score::BoardEvaluation;
+use crate::core::search;
 use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::conspiracy_search::merging::{merge_remove_overwritten, MergeFn};
 use crate::core::search::conspiracy_search::mtd_w_conspiracy;
-use crate::core::search::mtdbi::determine_mtdbi_step;
-use crate::core::search::mtdf::determine_mtdf_step;
+use crate::core::search::iterative_deepening::iterative_deepening_search;
+use crate::core::search::mtdbi::{determine_mtdbi_step, mtdbi_iterative_deepening_search};
+use crate::core::search::mtdf::{determine_mtdf_step, mtdf_iterative_deepening_search};
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::SearchDepth;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
@@ -114,6 +116,9 @@ impl TranspositionOptions {
 pub enum SearchAlgorithm {
     MTDBiIterativeDeepeningConspiracy,
     MTDFIterativeDeepeningConspiracy,
+    MTDBiIterativeDeepening,
+    MTDFIterativeDeepening,
+    AlphaBetaIterativeDeepening,
 }
 
 impl SearchAlgorithm {
@@ -121,6 +126,9 @@ impl SearchAlgorithm {
         match self {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => true,
             SearchAlgorithm::MTDFIterativeDeepeningConspiracy => true,
+            SearchAlgorithm::MTDBiIterativeDeepening => false,
+            SearchAlgorithm::MTDFIterativeDeepening => false,
+            SearchAlgorithm::AlphaBetaIterativeDeepening => false,
         }
     }
 
@@ -128,6 +136,9 @@ impl SearchAlgorithm {
         match self {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => database::rows::SearchAlgorithm::MtdBi,
             SearchAlgorithm::MTDFIterativeDeepeningConspiracy => database::rows::SearchAlgorithm::MtdF,
+            SearchAlgorithm::MTDBiIterativeDeepening => database::rows::SearchAlgorithm::MtdBi,
+            SearchAlgorithm::MTDFIterativeDeepening => database::rows::SearchAlgorithm::MtdF,
+            SearchAlgorithm::AlphaBetaIterativeDeepening => database::rows::SearchAlgorithm::AlphaBeta,
         }
     }
 }
@@ -220,6 +231,33 @@ pub fn play_position(
                 bucket_size,
                 num_buckets,
                 merge_fn,
+                default_search_logging_fn,
+            );
+        },
+        SearchAlgorithm::MTDBiIterativeDeepening => {
+            let _: (DebugSearchResult, _, _) = mtdbi_iterative_deepening_search(
+                &board_to_play,
+                &mut transposition_table,
+                visited_board_hashes.clone(),
+                CalculateOptions::Depth(calculate_depth),
+                default_search_logging_fn,
+            );
+        },
+        SearchAlgorithm::MTDFIterativeDeepening => {
+            let _: (DebugSearchResult, _, _) = mtdf_iterative_deepening_search(
+                &board_to_play,
+                &mut transposition_table,
+                visited_board_hashes.clone(),
+                CalculateOptions::Depth(calculate_depth),
+                default_search_logging_fn,
+            );
+        },
+        SearchAlgorithm::AlphaBetaIterativeDeepening => {
+            let _: (DebugSearchResult, _, _) = iterative_deepening_search(
+                &board_to_play,
+                &mut transposition_table,
+                visited_board_hashes.clone(),
+                CalculateOptions::Depth(calculate_depth),
                 default_search_logging_fn,
             );
         },
@@ -319,6 +357,84 @@ pub fn play_match(
                     bucket_size,
                     num_buckets,
                     merge_fn,
+                    |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
+                        position_row.run_id = run_id;
+                        position_row.uci_position = current_position.clone();
+                        position_row.move_num = current_move;
+
+                        let position_db_result = tokio_runtime
+                            .block_on(position_row.insert(db, POSITION_SEARCH_TABLE));
+
+                        let position_id = position_db_result.last_insert_rowid();
+
+                        for mt_row in mt_rows.iter_mut() {
+                            mt_row.position_search_id = position_id;
+
+                            tokio_runtime.block_on(mt_row.insert(db, MT_SEARCH_TABLE));
+                        }
+                    }
+                );
+
+                search_result = result.0;
+            },
+            SearchAlgorithm::MTDBiIterativeDeepening => {
+                let result: (DebugSearchResult, _, _) = mtdbi_iterative_deepening_search(
+                    &board_to_play,
+                    &mut transposition_table,
+                    visited_board_hashes.clone(),
+                    CalculateOptions::Depth(calculate_depth),
+                    |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
+                        position_row.run_id = run_id;
+                        position_row.uci_position = current_position.clone();
+                        position_row.move_num = current_move;
+
+                        let position_db_result = tokio_runtime
+                            .block_on(position_row.insert(db, POSITION_SEARCH_TABLE));
+
+                        let position_id = position_db_result.last_insert_rowid();
+
+                        for mt_row in mt_rows.iter_mut() {
+                            mt_row.position_search_id = position_id;
+
+                            tokio_runtime.block_on(mt_row.insert(db, MT_SEARCH_TABLE));
+                        }
+                    }
+                );
+
+                search_result = result.0;
+            },
+            SearchAlgorithm::MTDFIterativeDeepening => {
+                let result: (DebugSearchResult, _, _) = mtdf_iterative_deepening_search(
+                    &board_to_play,
+                    &mut transposition_table,
+                    visited_board_hashes.clone(),
+                    CalculateOptions::Depth(calculate_depth),
+                    |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
+                        position_row.run_id = run_id;
+                        position_row.uci_position = current_position.clone();
+                        position_row.move_num = current_move;
+
+                        let position_db_result = tokio_runtime
+                            .block_on(position_row.insert(db, POSITION_SEARCH_TABLE));
+
+                        let position_id = position_db_result.last_insert_rowid();
+
+                        for mt_row in mt_rows.iter_mut() {
+                            mt_row.position_search_id = position_id;
+
+                            tokio_runtime.block_on(mt_row.insert(db, MT_SEARCH_TABLE));
+                        }
+                    }
+                );
+
+                search_result = result.0;
+            },
+            SearchAlgorithm::AlphaBetaIterativeDeepening => {
+                let result: (DebugSearchResult, _, _) = iterative_deepening_search(
+                    &board_to_play,
+                    &mut transposition_table,
+                    visited_board_hashes.clone(),
+                    CalculateOptions::Depth(calculate_depth),
                     |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
                         position_row.run_id = run_id;
                         position_row.uci_position = current_position.clone();

@@ -16,7 +16,8 @@ use crate::core::search::transpositions::{EvalBound, TranspositionTable};
 
 pub fn search_depth_pruned<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     depth: u32,
     selective_depth: Option<u32>,
@@ -65,7 +66,8 @@ pub fn search_depth_pruned<T: SearchResult + Default>(
 
 pub fn search_alpha_beta<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     mut visited_boards: Vec<u64>,
     simple_evaluation: Centipawns,
     alpha: EvalBound,
@@ -296,7 +298,8 @@ pub fn search_alpha_beta<T: SearchResult + Default>(
 
 pub fn quiescence_alpha_beta<T: SearchResult + Default>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     simple_evaluation: Centipawns,
     alpha: EvalBound,
     beta: EvalBound,

@@ -50,7 +50,8 @@ pub fn is_still_searching(
 
 pub fn iterative_deepening_search<T: SearchResult + Default, L>(
     board: &Board,
-    transposition_table: &mut impl TranspositionTable,
+    // transposition_table: &mut impl TranspositionTable,
+    transposition_table: &mut Box<dyn TranspositionTable>,
     visited_boards: Vec<u64>,
     options: CalculateOptions,
     search_logging: L,

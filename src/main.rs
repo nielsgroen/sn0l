@@ -9,6 +9,7 @@ use sn0l::core::search::iterative_deepening::iterative_deepening_search;
 use sn0l::core::search::search_result::minimal_search_result::MinimalSearchResult;
 use sn0l::core::search::SearchCommand;
 use sn0l::core::search::transpositions::no_transposition::NoTranspositionTable;
+use sn0l::core::search::transpositions::TranspositionTable;
 use sn0l::input;
 use sn0l::input::protocol_interpreter::{CalculateOptions, Command};
 use sn0l::input::stdin::listen_to_stdin;
@@ -80,11 +81,12 @@ fn start_uci_protocol() -> anyhow::Result<()> {
 
 fn run_benchmark() -> anyhow::Result<()> {
     println!("Started benchmark");
+    let mut transposition_table: Box<dyn TranspositionTable> = Box::new(NoTranspositionTable::default());
 
     let (result, _depth, _selective_depth): (MinimalSearchResult, _, _) =
         iterative_deepening_search(
             &Board::default(),
-            &mut NoTranspositionTable::default(),
+            &mut transposition_table,
             Vec::new(),
             CalculateOptions::Depth(5),
             |_, _| {},
