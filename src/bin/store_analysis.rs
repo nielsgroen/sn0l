@@ -55,7 +55,8 @@ fn main() {
 
     match args.play_options {
         PlayOptions::Match => {
-            for (opening_name, position) in positions.into_iter() {
+            for (index, (opening_name, position)) in positions.into_iter().enumerate() {
+                println!("starting match {}", index);
                 play_match(
                     &position,
                     search_depth,
@@ -69,7 +70,8 @@ fn main() {
             }
         },
         PlayOptions::Position => {
-            for (opening_name, position) in positions.into_iter() {
+            for (index, (opening_name, position)) in positions.into_iter().enumerate() {
+                println!("starting position {}", index);
                 play_position(
                     &position,
                     search_depth,

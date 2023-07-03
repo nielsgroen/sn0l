@@ -56,7 +56,7 @@ pub fn mtdf_search<T: SearchResult + Default + Clone>(
 }
 
 
-fn determine_mtdf_step(last_test_value: BoardEvaluation, lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> BoardEvaluation {
+pub fn determine_mtdf_step(last_test_value: BoardEvaluation, lowerbound: BoardEvaluation, upperbound: BoardEvaluation) -> BoardEvaluation {
     if last_test_value >= upperbound {
         let mut new_value = min(upperbound, last_test_value.change_centipawns(-MTDF_STEP_SIZE));
         if new_value <= lowerbound {

@@ -14,6 +14,7 @@ use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::conspiracy_search::merging::{merge_remove_overwritten, MergeFn};
 use crate::core::search::conspiracy_search::mtd_w_conspiracy;
 use crate::core::search::mtdbi::determine_mtdbi_step;
+use crate::core::search::mtdf::determine_mtdf_step;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::core::search::SearchDepth;
 use crate::core::search::transpositions::{EvalBound, TranspositionTable};
@@ -112,18 +113,21 @@ impl TranspositionOptions {
 #[derive(Copy, Clone, Debug, ValueEnum)]
 pub enum SearchAlgorithm {
     MTDBiIterativeDeepeningConspiracy,
+    MTDFIterativeDeepeningConspiracy,
 }
 
 impl SearchAlgorithm {
     pub fn is_conspiracy_search(&self) -> bool {
         match self {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => true,
+            SearchAlgorithm::MTDFIterativeDeepeningConspiracy => true,
         }
     }
 
     pub fn to_db_search_algorithm(&self) -> database::rows::SearchAlgorithm {
         match self {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => database::rows::SearchAlgorithm::MtdBi,
+            SearchAlgorithm::MTDFIterativeDeepeningConspiracy => database::rows::SearchAlgorithm::MtdF,
         }
     }
 }
@@ -203,7 +207,22 @@ pub fn play_position(
                 merge_fn,
                 default_search_logging_fn,
             );
-        }
+        },
+        SearchAlgorithm::MTDFIterativeDeepeningConspiracy => {
+            let (bucket_size, num_buckets, merge_fn) = unwrap_conspiracy_options(conspiracy_options);
+
+            let _: (DebugSearchResult, _, _, _) = mtd_w_conspiracy::mtd_iterative_deepening_search(
+                &board_to_play,
+                &mut transposition_table,
+                visited_board_hashes.clone(),
+                CalculateOptions::Depth(calculate_depth),
+                determine_mtdf_step,
+                bucket_size,
+                num_buckets,
+                merge_fn,
+                default_search_logging_fn,
+            );
+        },
     }
 }
 
@@ -254,6 +273,7 @@ pub fn play_match(
     let mut fifty_move_rule_counter = 0;
 
     while status == BoardStatus::Ongoing {
+        let search_result;
         match algorithm_used {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => {
                 let (bucket_size, num_buckets, merge_fn) = unwrap_conspiracy_options(conspiracy_options);
@@ -285,27 +305,59 @@ pub fn play_match(
                     }
                 );
 
-                let search_result = result.0;
+                search_result = result.0;
+            },
+            SearchAlgorithm::MTDFIterativeDeepeningConspiracy => {
+                let (bucket_size, num_buckets, merge_fn) = unwrap_conspiracy_options(conspiracy_options);
 
-                board_to_play = board_to_play.make_move_new(search_result.best_move);
+                let result: (DebugSearchResult, _, _, _) = mtd_w_conspiracy::mtd_iterative_deepening_search(
+                    &board_to_play,
+                    &mut transposition_table,
+                    visited_board_hashes.clone(),
+                    CalculateOptions::Depth(calculate_depth),
+                    determine_mtdf_step,
+                    bucket_size,
+                    num_buckets,
+                    merge_fn,
+                    |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
+                        position_row.run_id = run_id;
+                        position_row.uci_position = current_position.clone();
+                        position_row.move_num = current_move;
 
-                if breaks_50_move_rule(&board_to_play, search_result.best_move) {
-                    fifty_move_rule_counter = 0;
-                }
+                        let position_db_result = tokio_runtime
+                            .block_on(position_row.insert(db, POSITION_SEARCH_TABLE));
 
-                visited_board_hashes.push(board_to_play.get_hash());
+                        let position_id = position_db_result.last_insert_rowid();
 
-                current_move += 1;
-                current_position.push_str(&format!(" {}", search_result.best_move));
+                        for mt_row in mt_rows.iter_mut() {
+                            mt_row.position_search_id = position_id;
 
-                move_gen = MoveGen::new_legal(&board_to_play);
-                status = game_status(&board_to_play, move_gen.len() > 0);
+                            tokio_runtime.block_on(mt_row.insert(db, MT_SEARCH_TABLE));
+                        }
+                    }
+                );
 
-                fifty_move_rule_counter += 1;
-                if fifty_move_rule_counter > 50 {
-                    status = BoardStatus::Stalemate;
-                }
-            }
+                search_result = result.0;
+            },
+        }
+
+        board_to_play = board_to_play.make_move_new(search_result.best_move);
+
+        if breaks_50_move_rule(&board_to_play, search_result.best_move) {
+            fifty_move_rule_counter = 0;
+        }
+
+        visited_board_hashes.push(board_to_play.get_hash());
+
+        current_move += 1;
+        current_position.push_str(&format!(" {}", search_result.best_move));
+
+        move_gen = MoveGen::new_legal(&board_to_play);
+        status = game_status(&board_to_play, move_gen.len() > 0);
+
+        fifty_move_rule_counter += 1;
+        if fifty_move_rule_counter > 50 {
+            status = BoardStatus::Stalemate;
         }
     }
 
