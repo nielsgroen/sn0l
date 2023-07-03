@@ -4,9 +4,9 @@ use thiserror::Error;
 use crate::core::search::search_result::debug_search_result::DebugSearchResult;
 use crate::tests::epd::{EPDParseError, EPDRecord};
 
-mod win_at_chess;
+pub mod win_at_chess;
 mod low_ply_tests;
-mod epd;
+pub mod epd;
 mod eval_bound;
 mod mt_alpha_beta_equivalence;
 mod mtdf_alpha_beta_equivalence;

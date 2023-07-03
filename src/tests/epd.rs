@@ -7,6 +7,7 @@ use std::str::FromStr;
 use chess::{Board, ChessMove};
 use anyhow::Result;
 use thiserror::Error;
+use crate::analysis::chess_position::ChessPosition;
 
 #[derive(Clone, Debug)]
 pub struct EPDRecord {
@@ -83,6 +84,12 @@ impl FromStr for EPDRecord {
             best_move,
             id: id.map(|x| x.to_string()),
         })
+    }
+}
+
+impl ChessPosition for EPDRecord {
+    fn uci_position(&self) -> (Option<String>, String) {
+        (None, self.fen.clone())
     }
 }
 

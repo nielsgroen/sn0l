@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use anyhow::Result;
 use chess::ChessMove;
+use itertools::Itertools;
+use crate::analysis::chess_position::ChessPosition;
 
 pub const A_OPENING_PATH: &str = "./src/analysis/assets/a.tsv";
 pub const B_OPENING_PATH: &str = "./src/analysis/assets/b.tsv";
@@ -16,6 +18,16 @@ pub struct ChessOpening {
     pub eco_code: String,
     pub name: String,
     pub moves: Vec<ChessMove>,
+}
+
+impl ChessPosition for ChessOpening {
+    fn uci_position(&self) -> (Option<String>, String) {
+        let moves = self.moves
+            .iter()
+            .format(" ");
+
+        (Some(self.name.clone()), format!("startpos {}", moves))
+    }
 }
 
 pub fn get_opening_records() -> Vec<ChessOpening> {
