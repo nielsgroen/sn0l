@@ -1,11 +1,11 @@
 use std::cmp::{max, min};
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Sub};
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, Serializer};
 use crate::core::score::{BoardEvaluation, Centipawns};
 
 // enum order is important for the derive Ord
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ConspiracyValue {
     Count(u32),
     Unreachable,
@@ -46,6 +46,25 @@ impl AddAssign for ConspiracyValue {
     }
 }
 
+impl Debug for ConspiracyValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConspiracyValue::Count(x) => write!(f, "{}", x),
+            ConspiracyValue::Unreachable => write!(f, "U"),
+        }
+    }
+}
+
+impl ToString for ConspiracyValue {
+    fn to_string(&self) -> String {
+        match self {
+            ConspiracyValue::Count(x) => format!("{}", x),
+            ConspiracyValue::Unreachable => format!("U"),
+        }
+    }
+}
+
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ConspiracyCounter {
     // Holds the delta-needed(i,T,V) for each bucket: the number of conspirators needed to get V
@@ -55,7 +74,6 @@ pub struct ConspiracyCounter {
     pub up_buckets: Vec<ConspiracyValue>,
     pub down_buckets: Vec<ConspiracyValue>,
 }
-
 
 impl ConspiracyCounter {
     pub fn new(bucket_size: u32, num_buckets: usize) -> Self {
@@ -204,6 +222,18 @@ impl ConspiracyCounter {
         self.up_buckets = new_up_buckets;
     }
 
+    pub fn zeroed_buckets(&self) -> bool {
+        let up = self.up_buckets
+            .iter()
+            .all(|x| *x == ConspiracyValue::Count(0));
+
+        let down = self.down_buckets
+            .iter()
+            .all(|x| *x == ConspiracyValue::Count(0));
+
+        up && down
+    }
+
     /// Returns the index of which bucket the value corresponds to
     fn which_bucket(value: BoardEvaluation, bucket_size: u32, num_buckets: usize) -> usize {
         match value {
@@ -235,5 +265,11 @@ impl ConspiracyCounter {
             BoardEvaluation::PieceScore(Centipawns::new(lowerbound)),
             BoardEvaluation::PieceScore(Centipawns::new(upperbound)),
         )
+    }
+}
+
+impl ToString for ConspiracyCounter {
+    fn to_string(&self) -> String {
+        format!("{}, {:?}, {:?}", self.bucket_size, self.down_buckets, self.up_buckets)
     }
 }

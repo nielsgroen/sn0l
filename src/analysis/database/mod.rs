@@ -9,7 +9,7 @@ pub const RUN_TABLE: &str = "run";
 pub const POSITION_SEARCH_TABLE: &str = "position_search";
 pub const MT_SEARCH_TABLE: &str = "mt_search";
 
-pub async fn create_db_if_not_exists() -> SqlitePool {
+pub async fn create_db_if_not_exists(url: &str) -> SqlitePool {
     if !Sqlite::database_exists(DB_URL).await.unwrap_or(false) {
         println!("Creating Database {}", DB_URL);
 
@@ -50,6 +50,7 @@ pub async fn create_tables_if_not_exists(db: &SqlitePool) {
             config_id INTEGER NOT NULL,
             uci_position TEXT NOT NULL,
             opening_name TEXT,
+            match_result TEXT,
             timestamp INTEGER,
             FOREIGN KEY(config_id) REFERENCES config(id)
         );

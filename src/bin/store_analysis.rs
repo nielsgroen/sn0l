@@ -1,9 +1,11 @@
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Error, Sqlite};
+use clap::Parser;
+use sn0l::analysis::args::Args;
 use sn0l::analysis::database::{CONFIG_TABLE, create_db_if_not_exists, create_tables_if_not_exists, DB_URL, MT_SEARCH_TABLE, POSITION_SEARCH_TABLE, RUN_TABLE};
 use sn0l::analysis::database::rows::{ConfigRow, ConspiracyMergeFn, MTSearchRow, PositionSearchRow, RunRow};
 use sn0l::analysis::match_orchestration;
-use sn0l::analysis::match_orchestration::{ConspiracySearchOptions, play_match, TranspositionOptions};
+use sn0l::analysis::match_orchestration::{ConspiracySearchOptions, MatchResult, play_match, TranspositionOptions};
 use sn0l::core::score::{BoardEvaluation, Centipawns};
 use sn0l::core::search::conspiracy_counter::ConspiracyCounter;
 use sn0l::core::search::transpositions::EvalBound;
@@ -19,10 +21,28 @@ use sn0l::core::search::transpositions::EvalBound;
 
 // #[tokio::main]
 fn main() {
-    let tokio_runtime = tokio::runtime::Runtime::new().expect("failed to create to tokio runtime");
-    let db = tokio_runtime.block_on(create_db_if_not_exists());
+    let args = Args::parse();
+
+    let db_path = &args.db_path;
+    let search_depth = args.search_depth;
+    let algorithm = args.algorithm;
+    let conspiracy_search_options = args.conspiracy_options();
+    let transposition_options = args.transposition_options();
+
+    let tokio_runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
+    let db = tokio_runtime.block_on(create_db_if_not_exists(db_path));
 
     tokio_runtime.block_on(create_tables_if_not_exists(&db));
+
+    play_match(
+        "startpos",
+        search_depth,
+        algorithm,
+        Some("Henk opening"),
+        conspiracy_search_options,
+        transposition_options,
+        &db,
+    );
 
     // let dummy_config = ConfigRow {
     //     max_search_depth: 0,
@@ -79,19 +99,4 @@ fn main() {
     // let insert_result = dummy_mt_search.insert(&db, MT_SEARCH_TABLE).await;
     // println!("insert_result: {:?}", insert_result);
 
-    play_match(
-        "startpos",
-        6,
-        match_orchestration::SearchAlgorithm::MTDBiIterativeDeepeningConspiracy,
-        Some("Henk opening"),
-        ConspiracySearchOptions::WithConspiracySearch {
-            bucket_size: 20,
-            num_buckets: 101,
-            merge_fn_name: ConspiracyMergeFn::MergeRemoveOverwritten,
-        },
-        TranspositionOptions::WithTransposition {
-            minimum_transposition_depth: 2,
-        },
-        &db,
-    );
 }

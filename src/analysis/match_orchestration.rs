@@ -1,6 +1,8 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-use chess::{Board, BoardStatus, MoveGen};
+use chess::{Board, BoardStatus, ChessMove, Color, MoveGen, Piece};
 use chess::File::G;
+use clap::ValueEnum;
+use serde::{Serialize, Deserialize};
 use sqlx::SqlitePool;
 use tokio::io::split;
 use crate::analysis::database;
@@ -22,6 +24,14 @@ use crate::input::protocol_interpreter::{CalculateOptions, Command};
 use crate::input::uci_interpreter::UciInterpreter;
 
 /// For simple automatic match playing with DB logging
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub enum MatchResult {
+    WhiteWon,
+    BlackWon,
+    Draw,
+    Undetermined,
+}
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum ConspiracySearchOptions {
@@ -99,12 +109,18 @@ impl TranspositionOptions {
 }
 
 // TODO: keep track of the search algorithms that support DB logging
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, ValueEnum)]
 pub enum SearchAlgorithm {
     MTDBiIterativeDeepeningConspiracy,
 }
 
 impl SearchAlgorithm {
+    pub fn is_conspiracy_search(&self) -> bool {
+        match self {
+            SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => true,
+        }
+    }
+
     pub fn to_db_search_algorithm(&self) -> database::rows::SearchAlgorithm {
         match self {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => database::rows::SearchAlgorithm::MtdBi,
@@ -171,12 +187,11 @@ pub fn play_match(
         .block_on(run_row.insert(db, RUN_TABLE));
     let run_id = run_db_result.last_insert_rowid();
 
+    let mut fifty_move_rule_counter = 0;
+
     while status == BoardStatus::Ongoing {
         match algorithm_used {
             SearchAlgorithm::MTDBiIterativeDeepeningConspiracy => {
-                if conspiracy_options == ConspiracySearchOptions::NoConspiracySearch {
-                    panic!("No Conspiracy options set for a conspiracy search");
-                }
                 let (bucket_size, num_buckets, merge_fn) = match conspiracy_options {
                     ConspiracySearchOptions::NoConspiracySearch => panic!("No conspiracy options set for conspiracy search"),
                     ConspiracySearchOptions::WithConspiracySearch {
@@ -224,6 +239,11 @@ pub fn play_match(
                 let search_result = result.0;
 
                 board_to_play = board_to_play.make_move_new(search_result.best_move);
+
+                if breaks_50_move_rule(&board_to_play, search_result.best_move) {
+                    fifty_move_rule_counter = 0;
+                }
+
                 visited_board_hashes.push(board_to_play.get_hash());
 
                 current_move += 1;
@@ -231,9 +251,39 @@ pub fn play_match(
 
                 move_gen = MoveGen::new_legal(&board_to_play);
                 status = game_status(&board_to_play, move_gen.len() > 0);
+
+                fifty_move_rule_counter += 1;
+                if fifty_move_rule_counter > 50 {
+                    status = BoardStatus::Stalemate;
+                }
             }
         }
     }
+
+    let match_result = match status {
+        BoardStatus::Ongoing => MatchResult::Draw,
+        BoardStatus::Stalemate => MatchResult::Draw,
+        BoardStatus::Checkmate => {
+            match board_to_play.side_to_move() {
+                Color::White => MatchResult::BlackWon,
+                Color::Black => MatchResult::WhiteWon,
+            }
+        }
+    };
+
+    tokio_runtime.block_on(RunRow::update_match_result(run_id, match_result, &db, RUN_TABLE));
+
 }
 
+/// Returns true on captures or pawn moves
+pub fn breaks_50_move_rule(board: &Board, chess_move: ChessMove) -> bool {
+    let source_piece = board.piece_on(chess_move.get_source());
+    if source_piece.is_none() {
+        return false;
+    }
 
+    let is_pawn_move = source_piece.map(|x| x == Piece::Pawn).unwrap_or(false);
+
+    // no need to check en passant: is a pawn move
+    board.piece_on(chess_move.get_dest()).is_some() || is_pawn_move
+}

@@ -1,8 +1,10 @@
 use std::fmt::{Display, Formatter};
 use serde::{Serialize, Deserialize};
+use clap::ValueEnum;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::SqlitePool;
 use crate::analysis::database::CONFIG_TABLE;
+use crate::analysis::match_orchestration::MatchResult;
 use crate::core::score::BoardEvaluation;
 use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::transpositions::EvalBound;
@@ -26,13 +28,14 @@ impl Display for SearchAlgorithm {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ValueEnum)]
 pub enum ConspiracyMergeFn {
     MergeRemoveOverwritten,
 }
 
 impl Display for ConspiracyMergeFn {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+
         match self {
             ConspiracyMergeFn::MergeRemoveOverwritten => write!(f, "MergeRemoveOverwritten"),
         }
@@ -134,6 +137,19 @@ impl RunRow {
 
         result
     }
+
+    pub async fn update_match_result(id: i64, match_result: MatchResult, db: &SqlitePool, table_name: &str) {
+        let _ = sqlx::query(&format!(r"
+            UPDATE {}
+            SET match_result = ?
+            WHERE id = ?;
+        ", table_name))
+            .bind(format!("{:?}", match_result))
+            .bind(id)
+            .execute(db)
+            .await
+            .unwrap();
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -180,7 +196,19 @@ impl PositionSearchRow {
             .bind(self.time_taken)
             .bind(self.nodes_evaluated)
             .bind(self.evaluation.to_string())
-            .bind(self.conspiracy_counter.clone().map(|x| serde_json::to_string(&x).unwrap()))
+            // .bind(self.conspiracy_counter.clone().map(|x| x.to_string()))
+            .bind({
+                match self.conspiracy_counter.clone() {
+                    None => None,
+                    Some(x) => {
+                        if x.zeroed_buckets() {
+                            None
+                        } else {
+                            Some(x.to_string())
+                        }
+                    },
+                }
+            })
             .bind(self.move_num)
             .bind(self.timestamp)
             .execute(db)
@@ -230,7 +258,19 @@ impl MTSearchRow {
             .bind(self.time_taken)
             .bind(self.nodes_evaluated)
             .bind(format!("{:?}", self.eval_bound))
-            .bind(self.conspiracy_counter.clone().map(|x| serde_json::to_string(&x).unwrap()))
+            // .bind(self.conspiracy_counter.clone().map(|x| x.to_string()))
+            .bind({
+                match self.conspiracy_counter.clone() {
+                    None => None,
+                    Some(x) => {
+                        if x.zeroed_buckets() {
+                            None
+                        } else {
+                            Some(x.to_string())
+                        }
+                    },
+                }
+            })
             .bind(self.search_num)
             .bind(self.timestamp)
             .execute(db)
