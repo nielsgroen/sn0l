@@ -5,6 +5,7 @@ use crate::core::search::transpositions::EvalBound;
 
 /// This module contains the multiple merging strategies for
 /// merging the ConspiracyCounters of the MT searches at the same depth.
+pub type MergeFn = fn(&mut ConspiracyCounter, &ConspiracyCounter, &EvalBound, &EvalBound);
 
 /// When the actual value of the root node is proven to be beyond a bucket,
 /// all the conspirators in that bucket are simply dropped (instead of, for example, moved)

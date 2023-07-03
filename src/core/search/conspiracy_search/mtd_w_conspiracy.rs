@@ -7,6 +7,7 @@ use crate::core::evaluation::single_evaluation;
 use crate::core::score::{BoardEvaluation, Centipawns};
 use crate::core::search::conspiracy_counter::ConspiracyCounter;
 use crate::core::search::conspiracy_search::log_info_search_results;
+use crate::core::search::conspiracy_search::merging::MergeFn;
 use crate::core::search::conspiracy_search::mt_w_conspiracy::search_mt_w_conspiracy;
 use crate::core::search::iterative_deepening::is_still_searching;
 use crate::core::search::mt::search_mt;
@@ -27,7 +28,7 @@ pub fn mtd_iterative_deepening_search<T: SearchResult + Default + Clone, L>(
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
     bucket_size: u32,
     num_buckets: usize,
-    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter, &EvalBound, &EvalBound),
+    conspiracy_merge_fn: MergeFn,
     search_logging: L,
 ) -> (T, ConspiracyCounter, u32, u32) where
     L: Fn(PositionSearchRow, Vec<MTSearchRow>) { // (SearchResult, ConspiracyCounter, depth, selective_depth)
@@ -98,7 +99,7 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
     step_fn: fn(BoardEvaluation, BoardEvaluation, BoardEvaluation) -> BoardEvaluation,
     bucket_size: u32,
     num_buckets: usize,
-    conspiracy_merge_fn: fn(&mut ConspiracyCounter, &ConspiracyCounter, &EvalBound, &EvalBound),
+    conspiracy_merge_fn: MergeFn,
 ) -> (T, ConspiracyCounter, Vec<MTSearchRow>, PositionSearchRow) {
     let mut current_test_value = start_point;
     let current_evaluation = single_evaluation(board, board.status());

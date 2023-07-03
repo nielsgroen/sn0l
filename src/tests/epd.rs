@@ -89,7 +89,7 @@ impl FromStr for EPDRecord {
 
 impl ChessPosition for EPDRecord {
     fn uci_position(&self) -> (Option<String>, String) {
-        (None, self.fen.clone())
+        (None, format!("fen {}", self.fen.clone()))
     }
 }
 

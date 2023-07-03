@@ -41,7 +41,7 @@ impl UciInterpreter {
 
                 board
             },
-            _ => panic!("unsupported position parameters")
+            x => panic!("unsupported position parameters {:?}", x),
         }
     }
 

@@ -10,10 +10,10 @@ pub const POSITION_SEARCH_TABLE: &str = "position_search";
 pub const MT_SEARCH_TABLE: &str = "mt_search";
 
 pub async fn create_db_if_not_exists(url: &str) -> SqlitePool {
-    if !Sqlite::database_exists(DB_URL).await.unwrap_or(false) {
-        println!("Creating Database {}", DB_URL);
+    if !Sqlite::database_exists(url).await.unwrap_or(false) {
+        println!("Creating Database {}", url);
 
-        match Sqlite::create_database(DB_URL).await {
+        match Sqlite::create_database(url).await {
             Ok(_) => println!("Succesfully created DB"),
             Err(error) => panic!("Failed to create DB {}", error),
         }
@@ -21,7 +21,7 @@ pub async fn create_db_if_not_exists(url: &str) -> SqlitePool {
         println!("Existing Database found");
     }
 
-    SqlitePool::connect(DB_URL).await.unwrap()
+    SqlitePool::connect(url).await.unwrap()
 }
 
 pub async fn create_tables_if_not_exists(db: &SqlitePool) {

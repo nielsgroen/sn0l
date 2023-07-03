@@ -1,11 +1,12 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Error, Sqlite};
 use clap::Parser;
-use sn0l::analysis::args::Args;
+use sn0l::analysis::args::{Args, PlayOptions};
 use sn0l::analysis::database::{CONFIG_TABLE, create_db_if_not_exists, create_tables_if_not_exists, DB_URL, MT_SEARCH_TABLE, POSITION_SEARCH_TABLE, RUN_TABLE};
 use sn0l::analysis::database::rows::{ConfigRow, ConspiracyMergeFn, MTSearchRow, PositionSearchRow, RunRow};
 use sn0l::analysis::match_orchestration;
-use sn0l::analysis::match_orchestration::{ConspiracySearchOptions, MatchResult, play_match, TranspositionOptions};
+use sn0l::analysis::match_orchestration::{ConspiracySearchOptions, MatchResult, play_match, play_position, TranspositionOptions};
 use sn0l::core::score::{BoardEvaluation, Centipawns};
 use sn0l::core::search::conspiracy_counter::ConspiracyCounter;
 use sn0l::core::search::transpositions::EvalBound;
@@ -34,76 +35,52 @@ fn main() {
 
     tokio_runtime.block_on(create_tables_if_not_exists(&db));
 
+    let positions = args.dataset.positions();
 
+    let time = SystemTime::now();
+    let config_row = ConfigRow {
+        max_search_depth: search_depth,
+        algorithm_used: algorithm.to_db_search_algorithm(),
+        conspiracy_search_used: algorithm.is_conspiracy_search(),
+        bucket_size: conspiracy_search_options.bucket_size(),
+        num_buckets: conspiracy_search_options.num_buckets().map(|x| x as u32),
+        conspiracy_merge_fn: conspiracy_search_options.merge_fn_name(),
+        transposition_table_used: transposition_options == TranspositionOptions::NoTransposition,
+        minimum_transposition_depth: transposition_options.minimum_transposition_depth(),
+        timestamp: time.duration_since(UNIX_EPOCH).expect("time went backwards").as_secs() as i64,
+    };
 
+    let config_db_result = tokio_runtime
+        .block_on(config_row.insert(&db, CONFIG_TABLE));
 
-
-
-    todo!();
-
-    play_match(
-        "startpos",
-        search_depth,
-        algorithm,
-        Some("Henk opening"),
-        conspiracy_search_options,
-        transposition_options,
-        &db,
-    );
-
-    // let dummy_config = ConfigRow {
-    //     max_search_depth: 0,
-    //     algorithm_used: SearchAlgorithm::AlphaBeta,
-    //     conspiracy_search_used: true,
-    //     bucket_size: Some(20),
-    //     num_buckets: Some(101),
-    //     conspiracy_merge_fn: None,
-    //     transposition_table_used: false,
-    //     minimum_transposition_depth: None,
-    //     timestamp: 0,
-    // };
-    //
-    // let insert_result = dummy_config.insert(&db, CONFIG_TABLE).await;
-    //
-    // println!("insert_result: {:?}", insert_result);
-    //
-    // let dummy_run = RunRow {
-    //     config_id: 1,
-    //     uci_position: "startpos b1c3".to_string(),
-    //     opening_name: Some("THE HENK TEST OPENING".to_string()),
-    //     timestamp: 0,
-    // };
-    //
-    // let insert_result = dummy_run.insert(&db, RUN_TABLE).await;
-    // println!("insert_result: {:?}", insert_result);
-    //
-    // let dummy_search = PositionSearchRow {
-    //     run_id: 1,
-    //     uci_position: "startpos g1f3".to_string(),
-    //     depth: 0,
-    //     time_taken: 0,
-    //     nodes_evaluated: 0,
-    //     evaluation: BoardEvaluation::WhiteMate(0),
-    //     conspiracy_counter: Some(ConspiracyCounter::new(20, 101)),
-    //     move_num: 0,
-    //     timestamp: 0,
-    // };
-    //
-    // let insert_result = dummy_search.insert(&db, POSITION_SEARCH_TABLE).await;
-    // println!("insert_result: {:?}", insert_result);
-    //
-    // let dummy_mt_search = MTSearchRow {
-    //     position_search_id: 1,
-    //     test_value: BoardEvaluation::PieceScore(Centipawns::new(-14)),
-    //     time_taken: 100,
-    //     nodes_evaluated: 69,
-    //     eval_bound: EvalBound::UpperBound(BoardEvaluation::PieceScore(Centipawns::new(-32))),
-    //     conspiracy_counter: Some(ConspiracyCounter::new(20, 101)),
-    //     search_num: 0,
-    //     timestamp: 0,
-    // };
-    //
-    // let insert_result = dummy_mt_search.insert(&db, MT_SEARCH_TABLE).await;
-    // println!("insert_result: {:?}", insert_result);
-
+    match args.play_options {
+        PlayOptions::Match => {
+            for (opening_name, position) in positions.into_iter() {
+                play_match(
+                    &position,
+                    search_depth,
+                    algorithm,
+                    opening_name.as_deref(),
+                    conspiracy_search_options,
+                    transposition_options,
+                    &db,
+                    config_db_result.last_insert_rowid(),
+                );
+            }
+        },
+        PlayOptions::Position => {
+            for (opening_name, position) in positions.into_iter() {
+                play_position(
+                    &position,
+                    search_depth,
+                    algorithm,
+                    opening_name.as_deref(),
+                    conspiracy_search_options,
+                    transposition_options,
+                    &db,
+                    config_db_result.last_insert_rowid(),
+                );
+            }
+        },
+    }
 }
