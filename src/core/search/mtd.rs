@@ -281,7 +281,33 @@ pub fn mtd_search<T: SearchResult + Default + Clone>(
                             position_search,
                         );
                     },
-                    _ => (),
+                    _ => {
+                        // we're not gonna hit a favourable bound, just make a small blunder before it gets worse
+                        if unstable_search_counter > 6 {
+                            let position_search = PositionSearchRow {
+                                run_id: 0, // NEEDS TO BE CHANGED HIGHER UP
+                                uci_position: "".to_string(), // NEEDS TO BE CHANGED HIGHER UP
+                                depth,
+                                time_taken: total_search_time.elapsed().unwrap_or(Duration::from_secs(0)).as_millis() as u32,
+                                nodes_evaluated: nodes_searched,
+                                evaluation: result.eval_bound().board_evaluation(),
+                                conspiracy_counter: None,
+                                move_num: 0, // NEEDS TO BE CHANGED HIGHER UP
+                                timestamp: total_search_time.duration_since(UNIX_EPOCH).unwrap_or(Duration::from_secs(0)).as_secs() as i64,
+                            };
+
+                            return (
+                                T::make_search_result(
+                                    result.best_move(),
+                                    EvalBound::Exact(result.eval_bound().board_evaluation()),
+                                    Some(nodes_searched),
+                                    result.critical_path(),
+                                ),
+                                mt_searches,
+                                position_search,
+                            );
+                        }
+                    },
                 }
 
                 // let alpha = match lowest_upperbound {
