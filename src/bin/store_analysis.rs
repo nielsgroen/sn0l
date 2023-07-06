@@ -45,7 +45,7 @@ fn main() {
         bucket_size: conspiracy_search_options.bucket_size(),
         num_buckets: conspiracy_search_options.num_buckets().map(|x| x as u32),
         conspiracy_merge_fn: conspiracy_search_options.merge_fn_name(),
-        transposition_table_used: transposition_options == TranspositionOptions::NoTransposition,
+        transposition_table_used: transposition_options != TranspositionOptions::NoTransposition,
         minimum_transposition_depth: transposition_options.minimum_transposition_depth(),
         timestamp: time.duration_since(UNIX_EPOCH).expect("time went backwards").as_secs() as i64,
     };
