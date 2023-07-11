@@ -8,6 +8,8 @@ use tokio::io::split;
 use crate::analysis::database;
 use crate::analysis::database::{CONFIG_TABLE, MT_SEARCH_TABLE, POSITION_SEARCH_TABLE, RUN_TABLE};
 use crate::analysis::database::rows::{ConfigRow, ConspiracyMergeFn, MTSearchRow, PositionSearchRow, RunRow};
+use crate::analysis::mtd_h::mtd_h_iterative_deepening_search;
+use crate::analysis::mtd_h_utils::MtdHParams;
 use crate::core::evaluation::game_status;
 use crate::core::score::BoardEvaluation;
 use crate::core::search;
@@ -119,6 +121,7 @@ pub enum SearchAlgorithm {
     MTDBiIterativeDeepening,
     MTDFIterativeDeepening,
     AlphaBetaIterativeDeepening,
+    MTDHIterativeDeepening,
 }
 
 impl SearchAlgorithm {
@@ -129,6 +132,7 @@ impl SearchAlgorithm {
             SearchAlgorithm::MTDBiIterativeDeepening => false,
             SearchAlgorithm::MTDFIterativeDeepening => false,
             SearchAlgorithm::AlphaBetaIterativeDeepening => false,
+            SearchAlgorithm::MTDHIterativeDeepening => true,
         }
     }
 
@@ -139,6 +143,7 @@ impl SearchAlgorithm {
             SearchAlgorithm::MTDBiIterativeDeepening => database::rows::SearchAlgorithm::MtdBi,
             SearchAlgorithm::MTDFIterativeDeepening => database::rows::SearchAlgorithm::MtdF,
             SearchAlgorithm::AlphaBetaIterativeDeepening => database::rows::SearchAlgorithm::AlphaBeta,
+            SearchAlgorithm::MTDHIterativeDeepening => database::rows::SearchAlgorithm::MtdH,
         }
     }
 }
@@ -150,6 +155,7 @@ pub fn play_position(
     opening_name: Option<&str>,
     conspiracy_options: ConspiracySearchOptions,
     transposition_options: TranspositionOptions,
+    mtd_h_params: &[MtdHParams],
     db: &SqlitePool,
     config_id: i64,
 ) {
@@ -261,6 +267,21 @@ pub fn play_position(
                 default_search_logging_fn,
             );
         },
+        SearchAlgorithm::MTDHIterativeDeepening => {
+            let (bucket_size, num_buckets, merge_fn) = unwrap_conspiracy_options(conspiracy_options);
+
+            let _: (DebugSearchResult, _, _, _) = mtd_h_iterative_deepening_search(
+                &board_to_play,
+                &mut transposition_table,
+                visited_board_hashes.clone(),
+                CalculateOptions::Depth(calculate_depth),
+                bucket_size,
+                num_buckets,
+                merge_fn,
+                default_search_logging_fn,
+                &mtd_h_params,
+            );
+        }
     }
 }
 
@@ -272,6 +293,7 @@ pub fn play_match(
     opening_name: Option<&str>,
     conspiracy_options: ConspiracySearchOptions,
     transposition_options: TranspositionOptions,
+    mtd_h_params: &[MtdHParams],
     db: &SqlitePool,
     config_id: i64,
 ) {
@@ -455,6 +477,38 @@ pub fn play_match(
 
                 search_result = result.0;
             },
+            SearchAlgorithm::MTDHIterativeDeepening => {
+                let (bucket_size, num_buckets, merge_fn) = unwrap_conspiracy_options(conspiracy_options);
+
+                let result: (DebugSearchResult, _, _, _) = mtd_h_iterative_deepening_search(
+                    &board_to_play,
+                    &mut transposition_table,
+                    visited_board_hashes.clone(),
+                    CalculateOptions::Depth(calculate_depth),
+                    bucket_size,
+                    num_buckets,
+                    merge_fn,
+                    |mut position_row: PositionSearchRow, mut mt_rows: Vec<MTSearchRow>| {
+                        position_row.run_id = run_id;
+                        position_row.uci_position = current_position.clone();
+                        position_row.move_num = current_move;
+
+                        let position_db_result = tokio_runtime
+                            .block_on(position_row.insert(db, POSITION_SEARCH_TABLE));
+
+                        let position_id = position_db_result.last_insert_rowid();
+
+                        for mt_row in mt_rows.iter_mut() {
+                            mt_row.position_search_id = position_id;
+
+                            tokio_runtime.block_on(mt_row.insert(db, MT_SEARCH_TABLE));
+                        }
+                    },
+                    &mtd_h_params,
+                );
+
+                search_result = result.0;
+            }
         }
 
         board_to_play = board_to_play.make_move_new(search_result.best_move);

@@ -11,6 +11,22 @@ pub enum ConspiracyValue {
     Unreachable,
 }
 
+impl ConspiracyValue {
+    pub fn is_zero(&self) -> bool {
+        match self {
+            ConspiracyValue::Count(x) => *x == 0,
+            ConspiracyValue::Unreachable => false,
+        }
+    }
+
+    pub fn is_unreachable(&self) -> bool {
+        match self {
+            ConspiracyValue::Count(_) => false,
+            ConspiracyValue::Unreachable => true,
+        }
+    }
+}
+
 impl Add for ConspiracyValue {
     type Output = Self;
 
@@ -235,7 +251,7 @@ impl ConspiracyCounter {
     }
 
     /// Returns the index of which bucket the value corresponds to
-    fn which_bucket(value: BoardEvaluation, bucket_size: u32, num_buckets: usize) -> usize {
+    pub fn which_bucket(value: BoardEvaluation, bucket_size: u32, num_buckets: usize) -> usize {
         match value {
             BoardEvaluation::BlackMate(_) => 0,
             BoardEvaluation::PieceScore(x) => {
@@ -243,7 +259,14 @@ impl ConspiracyCounter {
                 let middle_bucket = num_buckets / 2;
 
                 // The `+ bucket_size / 2` makes sure that the middle bucket is centered around 0
-                let bucket_offset = (x.0 + bucket_size as i64 / 2) / bucket_size as i64;
+                // there is a bug here: integer division of negative / positive, rounds up
+                // bug kept for now for compatibility with generated results
+                let bucket_offset;
+                if x.0 >= 0 {
+                    bucket_offset = (x.0 + bucket_size as i64 / 2) / bucket_size as i64;
+                } else {
+                    bucket_offset = (x.0 + bucket_size as i64 / 2) / bucket_size as i64 - 1;
+                }
                 let bucket_index = (middle_bucket as i64 + bucket_offset);
 
                 max(0, min(num_buckets.saturating_sub(1) as i64, bucket_index)) as usize

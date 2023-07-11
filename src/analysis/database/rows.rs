@@ -16,6 +16,7 @@ pub enum SearchAlgorithm {
     AlphaBeta,
     MtdBi,
     MtdF,
+    MtdH,
 }
 
 impl Display for SearchAlgorithm {
@@ -24,6 +25,7 @@ impl Display for SearchAlgorithm {
             SearchAlgorithm::AlphaBeta => write!(f, "AlphaBeta"),
             SearchAlgorithm::MtdBi => write!(f, "MtdBi"),
             SearchAlgorithm::MtdF => write!(f, "MtdF"),
+            SearchAlgorithm::MtdH => write!(f, "MtdH"),
         }
     }
 }

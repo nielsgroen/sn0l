@@ -4,6 +4,7 @@ use crate::analysis::chess_position::ChessPosition;
 use crate::analysis::database::rows::ConspiracyMergeFn;
 use crate::analysis::{match_orchestration, openings_dataset};
 use crate::analysis::match_orchestration::{ConspiracySearchOptions, TranspositionOptions};
+use crate::analysis::mtd_h_utils::MtdHParams;
 use crate::tests::{epd, win_at_chess};
 use crate::tests::win_at_chess::EPD_PATH;
 
@@ -86,7 +87,16 @@ pub struct Args {
     /// The minimum entry depth required to be considered for the transposition table.
     #[arg(long, default_value_t = 2)]
     minimum_transposition_depth: u32,
+
+    /// The path for the mtd-h parameters.
+    #[arg(long, default_value = "./python/analysis_output/optimal_params.csv")]
+    pub mtd_h_params_path: String,
+
+    /// The default distance for the distance between training and target distance for MTDH params.
+    #[arg(long, default_value_t = 2)]
+    pub mtd_h_training_distance: u32,
 }
+
 
 impl Args {
     pub fn conspiracy_options(&self) -> ConspiracySearchOptions {
@@ -109,5 +119,41 @@ impl Args {
         } else {
             TranspositionOptions::NoTransposition
         }
+    }
+
+    pub fn mtd_h_params(&self) -> Vec<MtdHParams> {
+        let mut reader = csv::ReaderBuilder::new()
+            .delimiter(b',')
+            .has_headers(true)
+            .from_path(&self.mtd_h_params_path);
+
+        if reader.is_err() {
+            return vec![];
+        }
+
+        let mut reader = reader.unwrap();
+
+        let mut result: Vec<MtdHParams> = Vec::new();
+        for record in reader.deserialize() {
+            let record_result: Result<MtdHParams, _> = record;
+
+            if record_result.is_ok() {
+                result.push(record_result.ok().unwrap());
+            }
+
+            // println!("{:?}", record);
+        }
+
+        result
+    }
+
+    pub fn filtered_mtd_h_params(&self) -> Vec<MtdHParams> {
+        let result = self.mtd_h_params();
+
+        let filtered_result = result.into_iter()
+            .filter(|x| x.target_depth.saturating_sub(x.training_depth) == self.mtd_h_training_distance)
+            .collect();
+
+        filtered_result
     }
 }

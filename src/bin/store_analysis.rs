@@ -1,3 +1,4 @@
+use std::process::exit;
 use std::time::{SystemTime, UNIX_EPOCH};
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Error, Sqlite};
@@ -7,8 +8,9 @@ use sn0l::analysis::database::{CONFIG_TABLE, create_db_if_not_exists, create_tab
 use sn0l::analysis::database::rows::{ConfigRow, ConspiracyMergeFn, MTSearchRow, PositionSearchRow, RunRow};
 use sn0l::analysis::match_orchestration;
 use sn0l::analysis::match_orchestration::{ConspiracySearchOptions, MatchResult, play_match, play_position, TranspositionOptions};
+use sn0l::analysis::mtd_h_utils::{select_test_point, update_probability_distribution};
 use sn0l::core::score::{BoardEvaluation, Centipawns};
-use sn0l::core::search::conspiracy_counter::ConspiracyCounter;
+use sn0l::core::search::conspiracy_counter::{ConspiracyCounter, ConspiracyValue};
 use sn0l::core::search::transpositions::EvalBound;
 
 /// This executable is for performing analysis on chess games, and storing those to the DB.
@@ -23,6 +25,52 @@ use sn0l::core::search::transpositions::EvalBound;
 // #[tokio::main]
 fn main() {
     let args = Args::parse();
+
+    let mtd_params = args.filtered_mtd_h_params();
+
+    // // TODO: remove `a`
+    // let mut a = None;
+    // for param in mtd_params.iter() {
+    //     if param.training_depth == 4 && param.target_depth == 6 {
+    //         a = Some(param.clone());
+    //     }
+    // }
+
+    // let prob = a.unwrap().generate_probability_distribution()
+
+    // let dummy_conspiracy_counter = ConspiracyCounter {
+    //     bucket_size: 20,
+    //     node_value: BoardEvaluation::PieceScore(Centipawns::new(-111)),
+    //     up_buckets: vec![ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(5), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(4), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(2), ConspiracyValue::Count(1), ConspiracyValue::Count(1), ConspiracyValue::Count(4), ConspiracyValue::Count(8), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(1), ConspiracyValue::Count(0),
+    //     ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(4), ConspiracyValue::Count(2), ConspiracyValue::Count(13), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0)],
+    //     down_buckets: vec![ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(2), ConspiracyValue::Count(7), ConspiracyValue::Count(0), ConspiracyValue::Count(2), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(1), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(2), ConspiracyValue::Count(16), ConspiracyValue::Count(13), ConspiracyValue::Count(49), ConspiracyValue::Count(16), ConspiracyValue::Count(10), ConspiracyValue::Count(9), ConspiracyValue::Count(3), ConspiracyValue::Count(4), ConspiracyValue::Count(4), ConspiracyValue::Count(5), ConspiracyValue::Count(5), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0),
+    //     ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0), ConspiracyValue::Count(0)]
+    // };
+    //
+    // let mut prob = a.unwrap().generate_probability_distribution(&dummy_conspiracy_counter, BoardEvaluation::PieceScore(Centipawns::new(239)));
+    // println!("probability distribution {:?}", prob);
+    // let test_value = select_test_point(
+    //     &prob,
+    //     dummy_conspiracy_counter.bucket_size,
+    //     BoardEvaluation::BlackMate(0),
+    //     BoardEvaluation::WhiteMate(0),
+    // );
+    // println!("test_value {:?}", test_value);
+    //
+    // let test_value = EvalBound::LowerBound(BoardEvaluation::PieceScore(Centipawns::new(-11)));
+    // println!("which_bucket {:?}", ConspiracyCounter::which_bucket(test_value.board_evaluation(), dummy_conspiracy_counter.bucket_size, prob.len()));
+    // update_probability_distribution(&mut prob, test_value, dummy_conspiracy_counter.bucket_size);
+    // println!("new probability distribution {:?}", prob);
+    //
+    // let test_value = select_test_point(
+    //     &prob,
+    //     dummy_conspiracy_counter.bucket_size,
+    //     BoardEvaluation::BlackMate(0),
+    //     BoardEvaluation::WhiteMate(0),
+    // );
+    // println!("new test_value {:?}", test_value);
+    //
+    // exit(0);
 
     let db_path = &args.db_path;
     let search_depth = args.search_depth;
@@ -64,6 +112,7 @@ fn main() {
                     opening_name.as_deref(),
                     conspiracy_search_options,
                     transposition_options,
+                    &mtd_params,
                     &db,
                     config_db_result.last_insert_rowid(),
                 );
@@ -79,6 +128,7 @@ fn main() {
                     opening_name.as_deref(),
                     conspiracy_search_options,
                     transposition_options,
+                    &mtd_params,
                     &db,
                     config_db_result.last_insert_rowid(),
                 );
