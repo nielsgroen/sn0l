@@ -160,6 +160,9 @@ pub fn select_test_point(probability_distribution: &[f64], bucket_size: u32, low
                 bucket_upperbound = BoardEvaluation::WhiteMate(0);
             }
 
+            bucket_lowerbound = min(bucket_lowerbound, upperbound);
+            bucket_upperbound = max(bucket_upperbound, lowerbound);
+
             let test_lowerbound = max(bucket_lowerbound, lowerbound);
             let test_upperbound = min(bucket_upperbound, upperbound);
 
@@ -173,7 +176,8 @@ pub fn select_test_point(probability_distribution: &[f64], bucket_size: u32, low
         }
     }
 
-    panic!("no bucket with cumulative score of > 0.5");
+    avg_bounds(lowerbound, upperbound)
+    // panic!("no bucket with cumulative score of > 0.5. {:?}", probability_distribution);
 }
 
 pub fn select_test_point_w_mate(

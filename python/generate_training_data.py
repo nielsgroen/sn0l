@@ -84,7 +84,10 @@ if __name__ == "__main__":
 
     position_runs_list = []
     for depth in range(1, 9):
-        position_runs_list.append(PositionRuns(training_run_id, db, depth=depth))
+        p_runs = PositionRuns(training_run_id, db, depth=depth, first_n_rows=250)
+        position_runs_list.append(p_runs)
+
+        print("num runs loaded", p_runs.runs.shape[0])
         print("loading depth", depth, "done")
 
     result_list = []

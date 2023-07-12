@@ -13,11 +13,16 @@ from python.per_alg_analysis import calc_stats
 class PositionRuns:
     """Represents the contents of an analysis on a list of runs on chess positions (not matches) with the same config"""
 
-    def __init__(self, config_id: int, db: Any, depth: Optional[int] = None):
+    def __init__(self, config_id: int, db: Any, depth: Optional[int] = None, first_n_rows: Optional[int] = None):
         if depth is None:
             depth_where_clause = ""
         else:
             depth_where_clause = "depth = {} AND".format(depth)
+
+        if first_n_rows is None:
+            limit_clause = ""
+        else:
+            limit_clause = "LIMIT {}".format(first_n_rows)
 
         pandas_config = pd.read_sql_query("SELECT * FROM config WHERE id = {}".format(config_id), db)
         row = pandas_config.iloc[0]
@@ -35,11 +40,11 @@ class PositionRuns:
             "timestamp": row["timestamp"],
         }
 
-        self.runs = pd.read_sql_query("SELECT * FROM run WHERE config_id = {}".format(config_id), db)
+        self.runs = pd.read_sql_query("SELECT * FROM run WHERE config_id = {} {}".format(config_id, limit_clause), db)
 
         self.positions = pd.read_sql_query("""SELECT * FROM position_search WHERE {} run_id IN (
-            SELECT id FROM run WHERE config_id = {}
-        )""".format(depth_where_clause, config_id), db)
+            SELECT id FROM run WHERE config_id = {} {}
+        )""".format(depth_where_clause, config_id, limit_clause), db)
 
         self.mt_searches = pd.read_sql_query("""
             SELECT
@@ -56,10 +61,10 @@ class PositionRuns:
             FROM mt_search JOIN (SELECT run_id, id AS position_id FROM position_search) AS ps ON ps.position_id = mt_search.position_search_id
             WHERE position_search_id IN (
                 SELECT id FROM position_search WHERE {} run_id IN (
-                    SELECT id FROM run WHERE config_id = {}
+                    SELECT id FROM run WHERE config_id = {} {}
                     )
                 );
-        """.format(depth_where_clause, config_id), db)
+        """.format(depth_where_clause, config_id, limit_clause), db)
 
     @cached_property
     def total_stats(self):
