@@ -55,8 +55,10 @@ if __name__ == "__main__":
     # )
     args = arg_parser.parse_args()
     # args.optimal_params_path = os.path.join(args.output_path, "optimal_params.csv")
-    args.total_nodes_visited_plot_path = os.path.join(args.output_path, "total_nodes_visited.pgn")
-    args.total_time_taken_plot_path = os.path.join(args.output_path, "total_time_taken.pgn")
+    args.total_nodes_visited_plot_path = os.path.join(args.output_path, "total_nodes_visited.png")
+    args.mt_searches_plot_path = os.path.join(args.output_path, "mt_searches.png")
+    args.nodes_per_second_plot_path = os.path.join(args.output_path, "nodes_per_second.png")
+    args.total_time_taken_plot_path = os.path.join(args.output_path, "total_time_taken.png")
 
     if not os.path.exists(args.output_path):
         os.mkdir(args.output_path)
@@ -110,6 +112,7 @@ if __name__ == "__main__":
     ax.set_ylabel("nodes visited")
     ax.set_xlabel("depth")
     plt.show()
+    plt.savefig(args.total_nodes_visited_plot_path)
 
     fig, ax = plt.subplots(1)
     fig: plt.Figure
@@ -126,6 +129,7 @@ if __name__ == "__main__":
     ax.set_ylabel("number of MT searches")
     ax.set_xlabel("depth")
     plt.show()
+    plt.savefig(args.mt_searches_plot_path)
 
     fig, ax = plt.subplots(1)
     fig: plt.Figure
@@ -142,6 +146,7 @@ if __name__ == "__main__":
     ax.set_ylabel("nodes per second")
     ax.set_xlabel("depth")
     plt.show()
+    plt.savefig(args.nodes_per_second_plot_path)
 
     fig, ax = plt.subplots(1)
     fig: plt.Figure
@@ -159,3 +164,4 @@ if __name__ == "__main__":
     ax.set_ylabel("time taken")
     ax.set_xlabel("depth")
     plt.show()
+    plt.savefig(args.total_time_taken_plot_path)
