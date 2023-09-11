@@ -13,16 +13,18 @@ from python.per_alg_analysis import calc_stats
 class PositionRuns:
     """Represents the contents of an analysis on a list of runs on chess positions (not matches) with the same config"""
 
-    def __init__(self, config_id: int, db: Any, depth: Optional[int] = None, first_n_rows: Optional[int] = None):
+    def __init__(self, config_id: int, db: Any, depth: Optional[int] = None, first_n_rows: Optional[int] = None, offset: Optional[int] = None):
         if depth is None:
             depth_where_clause = ""
         else:
             depth_where_clause = "depth = {} AND".format(depth)
 
-        if first_n_rows is None:
+        if first_n_rows is None and offset is None:
             limit_clause = ""
-        else:
+        elif offset is None:
             limit_clause = "LIMIT {}".format(first_n_rows)
+        else:
+            limit_clause = "LIMIT {} OFFSET {}".format(99999999999 if first_n_rows is None else first_n_rows, offset)
 
         pandas_config = pd.read_sql_query("SELECT * FROM config WHERE id = {}".format(config_id), db)
         row = pandas_config.iloc[0]

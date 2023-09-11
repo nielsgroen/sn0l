@@ -47,6 +47,16 @@ if __name__ == "__main__":
         help="The path of the DB to read from",
         default="../sqlite.db",
     )
+    arg_parser.add_argument(
+        "--offset",
+        help="The index of the first puzzle",
+        default=None,
+    )
+    arg_parser.add_argument(
+        "--limit",
+        help="Number of puzzles to query",
+        default=None,
+    )
     # arg_parser.add_argument(
     #     "--configs",
     #     help="The list of configs to use for analysis",
@@ -71,7 +81,7 @@ if __name__ == "__main__":
 
     config_collections = []
     for _, config in config_df.iterrows():
-        config_collection = ConfigCollection(config.to_dict(), db)
+        config_collection = ConfigCollection(config.to_dict(), db, limit=args.limit, offset=args.offset)
         print("config id", config_collection.config_id)
         print("algorithm_used", config_collection.config["algorithm_used"])
         print("time_taken_per_depth", config_collection.time_taken_per_depth)

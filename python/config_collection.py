@@ -7,7 +7,7 @@ from python.position_runs import PositionRuns
 
 class ConfigCollection:
 
-    def __init__(self, config: dict, db: sqlite3.Connection, line_style="-"):
+    def __init__(self, config: dict, db: sqlite3.Connection, line_style="-", **kwargs):
         self.config_id = config["id"]
         self.config = config
 
@@ -17,7 +17,7 @@ class ConfigCollection:
 
         self.position_list = []
         for depth in range(1, self.config["max_search_depth"] + 1):
-            self.position_list.append(PositionRuns(self.config_id, db, depth=depth))
+            self.position_list.append(PositionRuns(self.config_id, db, depth=depth, **kwargs))
 
     def get_position(self, depth) -> PositionRuns:
         return self.position_list[depth - 1]
