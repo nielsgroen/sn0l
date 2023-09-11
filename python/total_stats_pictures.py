@@ -111,7 +111,7 @@ if __name__ == "__main__":
     ax.set_title("Nodes visited per depth as a multiple of Alpha Beta search")
     ax.set_ylabel("nodes visited")
     ax.set_xlabel("depth")
-    plt.show()
+    # plt.show()
     plt.savefig(args.total_nodes_visited_plot_path)
 
     fig, ax = plt.subplots(1)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     ax.set_title("Number of MT searches per depth")
     ax.set_ylabel("number of MT searches")
     ax.set_xlabel("depth")
-    plt.show()
+    # plt.show()
     plt.savefig(args.mt_searches_plot_path)
 
     fig, ax = plt.subplots(1)
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     ax.set_title("nodes per second per depth")
     ax.set_ylabel("nodes per second")
     ax.set_xlabel("depth")
-    plt.show()
+    # plt.show()
     plt.savefig(args.nodes_per_second_plot_path)
 
     fig, ax = plt.subplots(1)
@@ -163,5 +163,5 @@ if __name__ == "__main__":
     ax.set_title("time taken per depth as a multiple of Alpha Beta search")
     ax.set_ylabel("time taken")
     ax.set_xlabel("depth")
-    plt.show()
+    # plt.show()
     plt.savefig(args.total_time_taken_plot_path)
